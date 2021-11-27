@@ -27,39 +27,47 @@
 enum op { NOP, INSERT, REMOVE };
 
 template <typename NodeType>
-class BundleEntry : public BundleEntryBase<NodeType> {
+
+class BundleEntry : public std::vector<std::shared_ptr<BundleEntryBase<NodeType>>> {
  public:
-  volatile timestamp_t ts_;  // Redefinition of ts_ to make it volitile.
+  // volatile timestamp_t ts_;  // Redefinition of ts_ to make it volitile.
 
   // Additional members.
-  BundleEntry *volatile next_;
-  volatile timestamp_t deleted_ts_;
+  //BundleEntry *volatile next_;
 
-  explicit BundleEntry(timestamp_t ts, NodeType *ptr, BundleEntry *next)
-      : ts_(ts), next_(next) {
-    this->ptr_ = ptr;
-    deleted_ts_ = BUNDLE_NULL_TIMESTAMP;
+  std::weak_ptr<BundleEntryBase<NodeType>> get(std::size_t i){
+    auto ret = std::weak_ptr<BundleEntryBase<NodeType>>{};
+    ret = std::vector<std::shared_ptr<BundleEntryBase<NodeType>>>::operator[]{i};
+    return ret;
   }
+  // volatile timestamp_t deleted_ts_;
 
-  void set_ts(const timestamp_t ts) { ts_ = ts; }
-  void set_ptr(NodeType *const ptr) { this->ptr_ = ptr; }
-  void set_next(BundleEntry *const next) { next_ = next; }
-  void mark(timestamp_t ts) { deleted_ts_ = ts; }
-  timestamp_t marked() { return deleted_ts_; }
+  // explicit BundleEntry(timestamp_t ts, NodeType *ptr, BundleEntry *next, size_t i)
+  //     : ts_(ts), next_(next) {
+    
+  //   this->ptr_ = ptr;
+  //   deleted_ts_ = BUNDLE_NULL_TIMESTAMP;
+  // }
 
-  inline void validate() {
-    if (ts_ < next_->ts_) {
-      std::cout << "Invalid bundle" << std::endl;
-      exit(1);
-    }
-  }
+  // void set_ts(const timestamp_t ts) { ts_ = ts; }
+  // void set_ptr(NodeType *const ptr) { this->ptr_ = ptr; }
+  // void set_next(BundleEntry *const next) { next_ = next; }
+  // void mark(timestamp_t ts) { deleted_ts_ = ts; }
+  // timestamp_t marked() { return deleted_ts_; }
+
+  // inline void validate() {
+  //   if (ts_ < next_->ts_) {
+  //     std::cout << "Invalid bundle" << std::endl;
+  //     exit(1);
+  //   }
+  // }
 };
 
 template <typename NodeType>
 class Bundle : public BundleInterface<NodeType> {
  private:
-  std::atomic<BundleEntry<NodeType> *> head_;
-  BundleEntry<NodeType> *volatile tail_;
+  std::atomic<BundleEntry<NodeType>> *head_;
+  BundleEntry<NodeType> volatile tail_;
 #ifdef BUNDLE_DEBUG
   volatile int updates = 0;
   BundleEntry<NodeType> *volatile last_recycled = nullptr;
@@ -68,35 +76,47 @@ class Bundle : public BundleInterface<NodeType> {
 
  public:
   ~Bundle() {
-    BundleEntry<NodeType> *curr = head_;
-    BundleEntry<NodeType> *next;
-    while (curr != tail_) {
-      next = curr->next_;
-      delete curr;
-      curr = next;
-    }
-    delete tail_;
+    head_.clear();
+    // BundleEntry<NodeType> *curr = head_;
+    // BundleEntry<NodeType> *next;
+    // while (curr != tail_) {
+    //   next = curr->next_;
+    //   delete curr;
+    //   curr = next;
+    // }
+    // delete tail_;
   }
 
   void init() override {
-    tail_ = new BundleEntry<NodeType>(BUNDLE_NULL_TIMESTAMP, nullptr, nullptr);
-    head_ = tail_;
+    head_.emplace_back(std::make_shared<BundleEntryBase<NodeType>>(BUNDLE_NULL_TIMESTAMP, nullptr));
+    // tail_ = new BundleEntry<NodeType>(BUNDLE_NULL_TIMESTAMP, nullptr, nullptr);
+    //head_ = tail_;
   }
 
   // Inserts a new rq_bundle_node at the head of the bundle.
   inline void prepare(NodeType *const ptr) override {
-    BundleEntry<NodeType> *new_entry =
-        new BundleEntry<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr, nullptr);
-    BundleEntry<NodeType> *expected;
+    BundleEntryBase<NodeType> *new_entry = 
+        new BundleEntryBase<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr);
+    BundleEntry<NodeType> *new_head;
+    new_head.emplace_back(new_entry);
+    //head_.emplace_back(std::make_shared<BundleEntry<NodeType>>(BUNDLE_PENDING_TIMESTAMP, ptr));
+    // BundleEntry<NodeType> *new_entry =
+    //     new BundleEntry<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr, nullptr);
+    
+    auto expected;
     while (true) {
-      expected = head_;
-      new_entry->next_ = expected;
+      expected = head;
+      // expected = head_;
+      new_head.emplace_back(expected.get(0));
+      // new_entry->next_ = expected;
+      new_head[0]->neighbors.emplace_back(new_head.get(1));
+      new_head[1]->neighbors.emplace_back(new_head.get(0));
       long i = 0;
-      while (expected->ts_ == BUNDLE_PENDING_TIMESTAMP) {
+      while (expected.get(0)->ts_ == BUNDLE_PENDING_TIMESTAMP) {
         // DEBUG_PRINT("insertAtHead");
         CPU_RELAX;
       }
-      if (head_.compare_exchange_weak(expected, new_entry)) {
+      if (head_.compare_exchange_weak(expected, new_head)) {
 #ifdef BUNDLE_DEBUG
         ++updates;
 #endif
@@ -107,7 +127,7 @@ class Bundle : public BundleInterface<NodeType> {
 
   // Labels the pending entry to make it visible to range queries.
   inline void finalize(timestamp_t ts) override {
-    BundleEntry<NodeType> *entry = head_;
+    BundleEntryBase<NodeType> *entry = head_.get(0);
     assert(entry->ts_ == BUNDLE_PENDING_TIMESTAMP);
     entry->ts_ = ts;
   }

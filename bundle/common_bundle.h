@@ -16,8 +16,17 @@ template <typename NodeType>
 class BundleEntryBase {
  public:
   NodeType *ptr_ = nullptr;                 // Reference at timestamp, ts.
-  timestamp_t ts_ = BUNDLE_NULL_TIMESTAMP;  // Timestamp of change.
+  volatile timestamp_t ts_ = BUNDLE_NULL_TIMESTAMP;  // Timestamp of change.
   bool marked_ = true;                      // True if not valid or is deleted.
+  volatile timestamp_t deleted_ts_;
+  std::vector<std::weak_ptr<BundleEntryBase<NodeType>>> neighbors;
+  
+  BundleEntryBase(timestamp_t ts, NodeType *ptr)
+    : ts_(ts), ptr_(ptr), neighbors{}{
+        deleted_ts_ = BUNDLE_NULL_TIMESTAMP;
+    }
+
+
 };
 
 template <typename NodeType>
