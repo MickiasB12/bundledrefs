@@ -232,6 +232,15 @@ class Bundle : public BundleInterface<NodeType> {
   // [UNSAFE] Returns the number of bundle entries.
   int size() override {
     int size = head_.size() - 1;
+    
+#ifdef BUNDLE_DEBUG
+    for(auto& u : head_){
+        if(u.lock()->marked() || u == nullptr){
+          std::cout << dump(0) << std::flush;
+          exit(1);
+        }
+    }
+#endif
     return size;
   }
 
