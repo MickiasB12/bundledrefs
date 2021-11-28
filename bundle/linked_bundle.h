@@ -3,12 +3,13 @@
 // This file implements a bundle as a linked list of bundle entries. A bundle is
 // prepared by CASing the head of the bundle to a pending entry.
 
-#ifndef BUNDLE_LINKED_BUNDLE_H
-#define BUNDLE_LINKED_BUNDLE_H
+#ifndef GRAPH_H
+#define GRAPH_H
+
 
 #include <pthread.h>
 #include <sys/types.h>
-
+#include <list>
 #include <atomic>
 #include <mutex>
 
@@ -25,6 +26,7 @@
   ++i;
 
 enum op { NOP, INSERT, REMOVE };
+
 
 template <typename NodeType>
 
@@ -52,7 +54,7 @@ class BundleEntry : public std::vector<std::shared_ptr<BundleEntryBase<NodeType>
   // void set_ts(const timestamp_t ts) { ts_ = ts; }
   // void set_ptr(NodeType *const ptr) { this->ptr_ = ptr; }
   // void set_next(BundleEntry *const next) { next_ = next; }
-  // void mark(timestamp_t ts) { deleted_ts_ = ts; }
+
   // timestamp_t marked() { return deleted_ts_; }
 
   // inline void validate() {
@@ -66,7 +68,7 @@ class BundleEntry : public std::vector<std::shared_ptr<BundleEntryBase<NodeType>
 template <typename NodeType>
 class Bundle : public BundleInterface<NodeType> {
  private:
-  std::atomic<BundleEntry<NodeType>> *head_;
+  std::atomic<BundleEntry<NodeType>> head_;
   BundleEntry<NodeType> volatile tail_;
 #ifdef BUNDLE_DEBUG
   volatile int updates = 0;
@@ -97,7 +99,7 @@ class Bundle : public BundleInterface<NodeType> {
   inline void prepare(NodeType *const ptr) override {
     BundleEntryBase<NodeType> *new_entry = 
         new BundleEntryBase<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr);
-    BundleEntry<NodeType> *new_head;
+    BundleEntry<NodeType> new_head;
     new_head.emplace_back(new_entry);
     //head_.emplace_back(std::make_shared<BundleEntry<NodeType>>(BUNDLE_PENDING_TIMESTAMP, ptr));
     // BundleEntry<NodeType> *new_entry =
@@ -105,14 +107,14 @@ class Bundle : public BundleInterface<NodeType> {
     
     auto expected;
     while (true) {
-      expected = head;
+      expected = head_;
       // expected = head_;
       new_head.emplace_back(expected.get(0));
       // new_entry->next_ = expected;
       new_head[0]->neighbors.emplace_back(new_head.get(1));
       new_head[1]->neighbors.emplace_back(new_head.get(0));
       long i = 0;
-      while (expected.get(0)->ts_ == BUNDLE_PENDING_TIMESTAMP) {
+      while (expected[0]->ts_ == BUNDLE_PENDING_TIMESTAMP) {
         // DEBUG_PRINT("insertAtHead");
         CPU_RELAX;
       }
@@ -128,30 +130,51 @@ class Bundle : public BundleInterface<NodeType> {
   // Labels the pending entry to make it visible to range queries.
   inline void finalize(timestamp_t ts) override {
     BundleEntryBase<NodeType> *entry = head_.get(0);
-    assert(entry->ts_ == BUNDLE_PENDING_TIMESTAMP);
+    assert(entry.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP);
     entry->ts_ = ts;
   }
 
   // Returns a reference to the node that immediately followed at timestamp ts.
   inline NodeType *getPtrByTimestamp(timestamp_t ts) override {
     // Start at head and work backwards until edge is found.
-    BundleEntry<NodeType> *curr = head_;
+    auto size = head_.size();
+    auto curr = head_.get(0);
     long i = 0;
-    while (curr->ts_ == BUNDLE_PENDING_TIMESTAMP) {
+    bool *visited = new bool[size]; 
+    while (curr.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP) {
       // DEBUG_PRINT("getPtrByTimestamp");
       CPU_RELAX;
     }
-    while (curr != tail_ && curr->ts_ > ts) {
-      assert(curr->ts_ != BUNDLE_NULL_TIMESTAMP);
-      curr = curr->next_;
+   
+    curr.lock()->visited_ = true;
+    list<BundleEntryBase<NodeType>> queue;
+    queue.push_back(curr);
+    // 'i' will be used to get all adjacent
+    // vertices of a vertex
+    auto visitedNodes;
+
+    while(!queue.empty() && curr.lock()->ts_ > ts){
+        curr = queue.front();
+        queue.pop_front();
+
+        for(visitedNodes = curr.lock()->neighbors.begin(); visitedNodes != curr.lock()->neighbors.end(); ++visitedNodes){
+            if(!visitedNodes.lock()->visited_){
+              visitedNodes.lock()->visited_ = true;
+              queue.push_back(visitedNodes);
+            }
+        }
     }
+    // while (curr != tail_ && curr->ts_ > ts) {
+    //   assert(curr->ts_ != BUNDLE_NULL_TIMESTAMP);
+    //   curr = curr->next_;
+    // }
 #ifdef BUNDLE_DEBUG
     if (curr->marked()) {
       std::cout << dump(0) << std::flush;
       exit(1);
     }
 #endif
-    return curr->ptr_;
+    return curr.lock()->ptr_;
   }
 
   // Reclaims any edges that are older than ts. At the moment this should be

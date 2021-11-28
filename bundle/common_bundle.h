@@ -12,12 +12,15 @@ typedef long long timestamp_t;
 #define BUNDLE_MIN_TIMESTAMP 1
 #define BUNDLE_MAX_TIMESTAMP LLONG_MAX
 
+
+
 template <typename NodeType>
 class BundleEntryBase {
  public:
   NodeType *ptr_ = nullptr;                 // Reference at timestamp, ts.
   volatile timestamp_t ts_ = BUNDLE_NULL_TIMESTAMP;  // Timestamp of change.
   bool marked_ = true;                      // True if not valid or is deleted.
+  bool visited_ = false;
   volatile timestamp_t deleted_ts_;
   std::vector<std::weak_ptr<BundleEntryBase<NodeType>>> neighbors;
   
@@ -25,6 +28,8 @@ class BundleEntryBase {
     : ts_(ts), ptr_(ptr), neighbors{}{
         deleted_ts_ = BUNDLE_NULL_TIMESTAMP;
     }
+  
+  void mark(timestamp_t ts) { deleted_ts_ = ts; }
 
 
 };
