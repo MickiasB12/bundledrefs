@@ -131,7 +131,7 @@ class Bundle : public BundleInterface<NodeType> {
   inline void finalize(timestamp_t ts) override {
     BundleEntryBase<NodeType> *entry = head_.get(0);
     assert(entry.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP);
-    entry->ts_ = ts;
+    entry.lock()->ts_ = ts;
   }
 
   // Returns a reference to the node that immediately followed at timestamp ts.
@@ -140,14 +140,14 @@ class Bundle : public BundleInterface<NodeType> {
     auto size = head_.size();
     auto curr = head_.get(0);
     long i = 0;
-    bool *visited = new bool[size]; 
+    // bool *visited = new bool[size]; 
     while (curr.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP) {
       // DEBUG_PRINT("getPtrByTimestamp");
       CPU_RELAX;
     }
    
     curr.lock()->visited_ = true;
-    list<BundleEntryBase<NodeType>> queue;
+    list<BundleEntryBase<NodeType> *> queue;
     queue.push_back(curr);
     // 'i' will be used to get all adjacent
     // vertices of a vertex
@@ -163,6 +163,11 @@ class Bundle : public BundleInterface<NodeType> {
               queue.push_back(visitedNodes);
             }
         }
+    }
+    for each (auto& u in head_){
+      if(u){
+        u.lock()->visited_ = false
+      }
     }
     // while (curr != tail_ && curr->ts_ > ts) {
     //   assert(curr->ts_ != BUNDLE_NULL_TIMESTAMP);
@@ -182,26 +187,53 @@ class Bundle : public BundleInterface<NodeType> {
   inline void reclaimEntries(timestamp_t ts) override {
     // Obtain a reference to the pred non-reclaimable entry and first
     // reclaimable one.
-    BundleEntry<NodeType> *pred = head_;
+    BundleEntry<NodeType> *pred = head_.get(0);
     long i = 0;
-    if (pred->ts_ == BUNDLE_PENDING_TIMESTAMP) {
+    list<BundleEntryBase<NodeType> *> Q;
+    Q.push_back(pred);
+    while (pred.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP && !Q.empty()) {
+      pred = Q.front();
+      Q.pop_front();
+      
+      auto x;
+      for(x = pred.lock()->neighbors.begin(); x != pred.lock()->neighbors.end(); x++){
+        if(!x.lock()->visited_){
+          x.lock()->visited_ = true;
+          Q.push_back(x);
+        }
+      }
       // DEBUG_PRINT("reclaimEntries");
-      pred = pred->next_;
+      // pred = pred->next_;
     }
+    Q.clear();
     SOFTWARE_BARRIER;
-    BundleEntry<NodeType> *curr = pred->next_;
-    if (pred == tail_ || curr == tail_) {
+    // BundleEntry<NodeType> *curr = pred->next_;
+    std::vector<std::weak_ptr<BundleEntry<NodeType>>> currNodes = pred.lock()->neighbors;
+    BundleEntry<NodeType> *curr;
+    if (pred.lock()->ts = BUNDLE_NULL_TIMESTAMP|| currNodes.empty()) {
       return;  // Nothing to do.
     }
 
+    curr = currNodes[0];
     // If there are no active RQs then we can recycle all edges, but the
     // newest (i.e., head). Similarly if the oldest active RQ is newer than
     // the newest entry, we can reclaim all older entries.
-    if (ts == BUNDLE_NULL_TIMESTAMP || pred->ts_ <= ts) {
-      pred->next_ = tail_;
+    if (ts == BUNDLE_NULL_TIMESTAMP || pred.lock()->ts_ <= ts) {
+      // pred->next_ = tail_;
+      pred.lock()->neighbors = {};
     } else {
       // Traverse from head and remove nodes that are lower than ts.
+      Q.push_back(curr);
+      while(curr.lock()->ptr_ != nullptr && curr.lock()->ts > ts){
+        curr = Q.front();
+        pred = curr;
+        Q.pop_front();
+
+        auto x;
+        for(x)
+      }
       while (curr != tail_ && curr->ts_ > ts) {
+        
         pred = curr;
         curr = curr->next_;
       }
