@@ -11,6 +11,8 @@
 
 #include <atomic>
 #include <mutex>
+#include <set>
+#include <queue>
 
 #include "common_bundle.h"
 #include "plaf.h"
@@ -32,18 +34,27 @@ class BundleEntry : public BundleEntryBase<NodeType> {
   volatile timestamp_t ts_;  // Redefinition of ts_ to make it volitile.
 
   // Additional members.
-  BundleEntry *volatile next_;
+  // BundleEntry *volatile next_;
+  std::vector<std::shared_ptr<BundleEntry>> *volatile neighbors;
+
   volatile timestamp_t deleted_ts_;
 
-  explicit BundleEntry(timestamp_t ts, NodeType *ptr, BundleEntry *next)
-      : ts_(ts), next_(next) {
+  // explicit BundleEntry(timestamp_t ts, NodeType *ptr, BundleEntry *next)
+  //     : ts_(ts), next_(next) {
+  //   this->ptr_ = ptr;
+  //   deleted_ts_ = BUNDLE_NULL_TIMESTAMP;
+  // }
+
+  explicit BundleEntry(timestamp_t ts, NodeType *ptr, std::vector<std::shared_ptr<BundleEntry<NodeType>>> *neighbors)
+      : ts_(ts), neighbors_(neighbors) {
     this->ptr_ = ptr;
     deleted_ts_ = BUNDLE_NULL_TIMESTAMP;
   }
 
   void set_ts(const timestamp_t ts) { ts_ = ts; }
   void set_ptr(NodeType *const ptr) { this->ptr_ = ptr; }
-  void set_next(BundleEntry *const next) { next_ = next; }
+  // void set_next(BundleEntry *const next) { next_ = next; }
+  void set_neighbors(std::vector<std::shared_ptr<BundleEntry>> *const neighbors) { neighbors_ = neighbors; }
   void mark(timestamp_t ts) { deleted_ts_ = ts; }
   timestamp_t marked() { return deleted_ts_; }
 
@@ -58,7 +69,8 @@ class BundleEntry : public BundleEntryBase<NodeType> {
 template <typename NodeType>
 class Bundle : public BundleInterface<NodeType> {
  private:
-  std::atomic<BundleEntry<NodeType> *> head_;
+  // std::atomic<BundleEntry<NodeType> *> head_;
+  std::atomic<std::set<BundleEntry<NodeType>>> *nodes;
   BundleEntry<NodeType> *volatile tail_;
 #ifdef BUNDLE_DEBUG
   volatile int updates = 0;
@@ -68,23 +80,50 @@ class Bundle : public BundleInterface<NodeType> {
 
  public:
   ~Bundle() {
-    BundleEntry<NodeType> *curr = head_;
-    BundleEntry<NodeType> *next;
-    while (curr != tail_) {
-      next = curr->next_;
-      delete curr;
-      curr = next;
+    // BundleEntry<NodeType> *curr = head_;
+    // BundleEntry<NodeType> *next;
+    // while (curr != tail_) {
+    //   next = curr->next_;
+    //   delete curr;
+    //   curr = next;
+    // }
+    // delete tail_;
+
+    for (auto it = nodes->begin(); it != nodes->end(); it++) {
+      delete *it
     }
-    delete tail_;
   }
 
   void init() override {
-    tail_ = new BundleEntry<NodeType>(BUNDLE_NULL_TIMESTAMP, nullptr, nullptr);
-    head_ = tail_;
+    // tail_ = new BundleEntry<NodeType>(BUNDLE_NULL_TIMESTAMP, nullptr, nullptr);
+    // head_ = tail_;
+    nodes = new std::set<BundleEntry<NodeType>>>();
   }
 
+//   // Inserts a new rq_bundle_node at the head of the bundle.
+//   inline void prepare(NodeType *const ptr) override {
+//     BundleEntry<NodeType> *new_entry =
+//         new BundleEntry<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr, nullptr);
+//     BundleEntry<NodeType> *expected;
+//     while (true) {
+//       expected = head_;
+//       new_entry->next_ = expected;
+//       long i = 0;
+//       while (expected->ts_ == BUNDLE_PENDING_TIMESTAMP) {
+//         // DEBUG_PRINT("insertAtHead");
+//         CPU_RELAX;
+//       }
+//       if (head_.compare_exchange_weak(expected, new_entry)) {
+// #ifdef BUNDLE_DEBUG
+//         ++updates;
+// #endif
+//         return;
+//       }
+//     }
+//   }
+
   // Inserts a new rq_bundle_node at the head of the bundle.
-  inline void prepare(NodeType *const ptr) override {
+  inline void prepare(NodeType *const ptr, std::vector<std::shared_ptr<BundleEntry<NodeType>>> *neighbors) override {
     BundleEntry<NodeType> *new_entry =
         new BundleEntry<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr, nullptr);
     BundleEntry<NodeType> *expected;
