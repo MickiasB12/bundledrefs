@@ -245,7 +245,7 @@ int lazylist<K,V,RecManager>::rangeQuery(const int tid, const K& lo, const K& hi
     recordmgr->leaveQuiescentState(tid, true);
     rqProvider->traversal_start(tid);
     int cnt = 0;
-    nodeptr curr = rqProvider->read_addr(tid, &head->next);
+    nodeptr curr = rqProvider->read_addr(tid, &hxead->next);
     while (curr->key < lo) {
         curr = rqProvider->read_addr(tid, &curr->next);
     }

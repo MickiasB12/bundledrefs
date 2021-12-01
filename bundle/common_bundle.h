@@ -22,7 +22,7 @@ class BundleEntryBase {
   bool marked_ = true;                      // True if not valid or is deleted.
   bool visited_ = false;
   volatile timestamp_t deleted_ts_;
-  std::vector<std::weak_ptr<BundleEntryBase<NodeType>>> neighbors;
+  std::vector<BundleEntryBase<NodeType> *> neighbors;
   
   BundleEntryBase(timestamp_t ts, NodeType *ptr)
     : ts_(ts), ptr_(ptr), neighbors{}{

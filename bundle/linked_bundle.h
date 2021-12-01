@@ -30,11 +30,11 @@ enum op { NOP, INSERT, REMOVE };
 
 template <typename NodeType>
 
-class BundleEntry : public std::vector<std::shared_ptr<BundleEntryBase<NodeType>>> {
+class BundleEntry : public std::vector<<BundleEntryBase<NodeType> *> {
  public:
-  std::weak_ptr<BundleEntryBase<NodeType>> get(std::size_t i){
-    auto ret = std::weak_ptr<BundleEntryBase<NodeType>>{};
-    ret = std::vector<std::shared_ptr<BundleEntryBase<NodeType>>>::operator[]{i};
+  BundleEntryBase<NodeType> * get(std::size_t i){
+    
+    auto ret = std::vector<<BundleEntryBase<NodeType> *>::operator[]{i};
     return ret;
   }
 };
@@ -52,17 +52,24 @@ class Bundle : public BundleInterface<NodeType> {
 
  public:
   ~Bundle() {
+    std::vector<BundleEntryBase<NodeType> *>::iterator i;
+    for(i = head_.begin(); i != head_.end(); i++){
+      delete *i;
+    }
     head_.clear();
+
   }
 
   void init() override {
-    head_.emplace_back(std::make_shared<BundleEntryBase<NodeType>>(BUNDLE_NULL_TIMESTAMP, nullptr));
+    BundleEntryBase<NodeType> *nullEntry = new BundleEntryBase<NodeType>(BUNDLE_NULL_TIMESTAMP, nullptr);
+    head_.emplace_back(nullEntry);
   }
 
   // Inserts a new rq_bundle_node at the head of the bundle.
   inline void prepare(NodeType *const ptr) override {
     BundleEntry<NodeType> new_head;
-    new_head.emplace_back(std::make_shared<BundleEntryBase<NodeType>>(BUNDLE_PENDING_TIMESTAMP, ptr));
+    BundleEntryBase<NodeType> *newEntry = new BundleEntryBase<NodeType>(BUNDLE_PENDING_TIMESTAMP, ptr);
+    new_head.emplace_back(newEntry);
     
     auto expected;
     while (true) {
@@ -87,8 +94,8 @@ class Bundle : public BundleInterface<NodeType> {
   // Labels the pending entry to make it visible to range queries.
   inline void finalize(timestamp_t ts) override {
     BundleEntryBase<NodeType> *entry = head_.get(0);
-    assert(entry.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP);
-    entry.lock()->ts_ = ts;
+    assert(entry->ts_ == BUNDLE_PENDING_TIMESTAMP);
+    entry->ts_ = ts;
   }
 
   // Returns a reference to the node that immediately followed at timestamp ts.
@@ -97,25 +104,26 @@ class Bundle : public BundleInterface<NodeType> {
     auto size = head_.size();
     auto curr = head_.get(0);
     long i = 0;
-    while (curr.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP) {
+    while (curr->ts_ == BUNDLE_PENDING_TIMESTAMP) {
       // DEBUG_PRINT("getPtrByTimestamp");
       CPU_RELAX;
     }
    
     curr.lock()->visited_ = true;
-    std::list<std::shared_ptr<BundleEntryBase<NodeType>>> queue;
+    std::list<<BundleEntryBase<NodeType> *> queue;
     queue.push_back(curr);
     // 'i' will be used to get all adjacent
     // vertices of a vertex
     auto visitedNodes;
 
-    while(!queue.empty() && curr.lock()->ts_ > ts){
+    while(!queue.empty() && curr->ts_ > ts){
         curr = queue.front();
         queue.pop_front();
 
-        for(visitedNodes = curr.lock()->neighbors.begin(); visitedNodes != curr.lock()->neighbors.end(); ++visitedNodes){
-            if(!visitedNodes.lock()->visited_){
-              visitedNodes.lock()->visited_ = true;
+      for(visitedNodes = curr->neighbors.begin(); 
+          visitedNodes != curr->neighbors.end(); ++visitedNodes){
+            if(!visitedNodes->visited_){
+              visitedNodes->visited_ = true;
               queue.push_back(visitedNodes);
             }
         }
@@ -141,16 +149,16 @@ class Bundle : public BundleInterface<NodeType> {
     // reclaimable one.
     auto pred = head_.get(0);
     long i = 0;
-    std::list<std::shared_ptr<BundleEntryBase<NodeType>>> Q;
+    std::list<<BundleEntryBase<NodeType> *> Q;
     Q.push_back(pred);
-    while (pred.lock()->ts_ == BUNDLE_PENDING_TIMESTAMP && !Q.empty()) {
+    while (pred->ts_ == BUNDLE_PENDING_TIMESTAMP && !Q.empty()) {
       pred = Q.front();
       Q.pop_front();
       
       auto x;
-      for(x = pred.lock()->neighbors.begin(); x != pred.lock()->neighbors.end(); ++x){
-        if(!x.lock()->visited_){
-          x.lock()->visited_ = true;
+      for(x = pred->neighbors.begin(); x != pred->neighbors.end(); ++x){
+        if(!x->visited_){
+          x->visited_ = true;
           Q.push_back(x);
         }
       }
@@ -159,7 +167,7 @@ class Bundle : public BundleInterface<NodeType> {
     SOFTWARE_BARRIER;
     auto currNodes = pred.lock()->neighbors;
     
-    if (pred.lock()->ts = BUNDLE_NULL_TIMESTAMP|| currNodes.empty()) {
+    if (pred->ts = BUNDLE_NULL_TIMESTAMP|| currNodes.empty()) {
       return;  // Nothing to do.
     }
 
@@ -168,34 +176,34 @@ class Bundle : public BundleInterface<NodeType> {
     // newest (i.e., head). Similarly if the oldest active RQ is newer than
     // the newest entry, we can reclaim all older entries.
     if (ts == BUNDLE_NULL_TIMESTAMP || pred.lock()->ts_ <= ts) {
-      pred.lock()->neighbors = {};
+      pred->neighbors = {};
     } else {
       // Traverse from head and remove nodes that are lower than ts.
       Q.push_back(curr);
-      while(curr.lock()->ptr_ != nullptr && curr.lock()->ts_ > ts){
+      while(curr->ptr_ != nullptr && curr->ts_ > ts){
         curr = Q.front();
         Q.pop_front();
 
         auto x;
-        for(x = curr.lock()->neighbors.begin(); x != curr.lock()->neighbors.end(); ++x){
-            if(!x.lock()->visited_){
-              x.lock()->visited_ = true;
+        for(x = curr->neighbors.begin(); x != curr->neighbors.end(); ++x){
+            if(!x->visited_){
+              x->visited_ = true;
               Q.push_back(x);
             }
         }
       }
       Q.clear();
 
-      if(curr.lock()->ptr_ != nullptr){
+      if(curr->ptr_ != nullptr){
         pred = curr;
-        currNodes = curr.lock()->neighbors;
-        pred.lock()->neighbors = {};
+        currNodes = curr->neighbors;
+        pred->neighbors = {};
       }
 
     }
 #ifdef BUNDLE_DEBUG
     last_recycled = curr;
-    oldest_edge = pred.lock()->ts_;
+    oldest_edge = pred->ts_;
 #endif
 
     // Reclaim nodes.
@@ -207,14 +215,14 @@ class Bundle : public BundleInterface<NodeType> {
         continue;
       } 
       auto x;
-      for(x = curr.lock()->neighbors.begin(); x != curr.lock()->neighbors.end(); ++x){
-        if(!x.lock()->visited_){
-          x.lock()->visited_ = true;
+      for(x = curr->neighbors.begin(); x != curr->neighbors.end(); ++x){
+        if(!x->visited_){
+          x->visited_ = true;
           Q.push_back(x);
         }
       }
       pred = curr;
-      pred.lock()->mark(ts);
+      pred->mark(ts);
 
 #ifndef BUNDLE_CLEANUP_NO_FREE
       delete pred;
@@ -224,7 +232,7 @@ class Bundle : public BundleInterface<NodeType> {
     //return visited back to false
     for(auto& u : head_){
       if(u){
-        u.lock()->visited_ = false;
+        u->visited_ = false;
       }
     }
   }
@@ -235,7 +243,7 @@ class Bundle : public BundleInterface<NodeType> {
     
 #ifdef BUNDLE_DEBUG
     for(auto& u : head_){
-        if(u.lock()->marked() || u == nullptr){
+        if(u->marked() || u == nullptr){
           std::cout << dump(0) << std::flush;
           exit(1);
         }
@@ -246,8 +254,8 @@ class Bundle : public BundleInterface<NodeType> {
 
   inline NodeType *first(timestamp_t &ts) override {
     auto entry = head_.get(0);
-    ts = entry.lock()->ts_;
-    return entry.lock()->ptr_;
+    ts = entry->ts_;
+    return entry->ptr_;
   }
 
   std::pair<NodeType *, timestamp_t> *get(int &length) override {
@@ -261,21 +269,21 @@ class Bundle : public BundleInterface<NodeType> {
     int pos = 0;
     NodeType *ptr;
     timestamp_t ts;
-    std::list<std::shared_ptr<BundleEntryBase<NodeType>>> queue;
+    std::list<<BundleEntryBase<NodeType> *> queue;
     queue.push_back(curr_entry);
 
     //Traverse through each node
     while(!queue.empty()){
       curr_entry = queue.front();
       queue.pop_front();
-      ptr = curr_entry.lock()->ptr_;
-      ts = curr_entry.lock()->ts_;
+      ptr = curr_entry->ptr_;
+      ts = curr_entry->ts_;
       retarr[pos++] = std::pair<NodeType *, timestamp_t>(ptr, ts);
 
       auto x;
-      for(x = curr_entry.lock()->neighbors.begin(); x != curr_entry.lock()->neighbors.end(); ++x){
-        if(!x.lock()->visited_){
-          x.lock()->visited_ = true;
+      for(x = curr_entry->neighbors.begin(); x != curr_entry->neighbors.end(); ++x){
+        if(!x->visited_){
+          x->visited_ = true;
           queue.push_back(x);
         }
       }
@@ -284,7 +292,7 @@ class Bundle : public BundleInterface<NodeType> {
     //reverse back visited to false again
     for(auto& u : head_){
       if(u){
-        u.lock()->visited_ = false;
+        u->visited_ = false;
       }
     }
     length = size;
@@ -298,7 +306,7 @@ class Bundle : public BundleInterface<NodeType> {
     ss << "(ts=" << ts << ") : ";
     long i = 0;
 
-    std::list<std::shared_ptr<BundleEntryBase<NodeType>>> queue;
+    std::list<<BundleEntryBase<NodeType> *> queue;
     queue.push_back(curr);
 
     //Traverse through each node
@@ -308,16 +316,16 @@ class Bundle : public BundleInterface<NodeType> {
       ss << "<" << curr.lock()->ts_ << "," << curr.lock()->ptr_ << ">"
          << "-->";
       auto x;
-      for(x = curr.lock()->neighbors.begin(); x != curr.lock()->neighbors.end(); ++x){
-        if(!x.lock()->visited_){
-          x.lock()->visited_ = true;
+      for(x = curr->neighbors.begin(); x != curr->neighbors.end(); ++x){
+        if(!x->visited_){
+          x->visited_ = true;
           queue.push_back(x);
         }
       }
     }
 
-    if (curr.lock()->ptr == nullptr) {
-      ss << "(tail)<" << curr.lock()->ts_ << "," << curr->ptr_ << ">";
+    if (curr->ptr == nullptr) {
+      ss << "(tail)<" << curr->ts_ << "," << curr->ptr_ << ">";
     } else {
       ss << "(unexpected end)";
     }
