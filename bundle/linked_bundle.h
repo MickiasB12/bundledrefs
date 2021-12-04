@@ -109,7 +109,7 @@ class Bundle : public BundleInterface<NodeType> {
       CPU_RELAX;
     }
    
-    curr.lock()->visited_ = true;
+    curr->visited_ = true;
     std::list<<BundleEntryBase<NodeType> *> queue;
     queue.push_back(curr);
     // 'i' will be used to get all adjacent
@@ -130,7 +130,7 @@ class Bundle : public BundleInterface<NodeType> {
     }
     for(auto& u : head_){
       if(u){
-        u.lock()->visited_ = false;
+        u->visited_ = false;
       }
     }
 #ifdef BUNDLE_DEBUG
@@ -139,7 +139,7 @@ class Bundle : public BundleInterface<NodeType> {
       exit(1);
     }
 #endif
-    return curr.lock()->ptr_;
+    return curr->ptr_;
   }
 
   // Reclaims any edges that are older than ts. At the moment this should be
@@ -165,7 +165,7 @@ class Bundle : public BundleInterface<NodeType> {
     }
     Q.clear();
     SOFTWARE_BARRIER;
-    auto currNodes = pred.lock()->neighbors;
+    auto currNodes = pred->neighbors;
     
     if (pred->ts = BUNDLE_NULL_TIMESTAMP|| currNodes.empty()) {
       return;  // Nothing to do.
@@ -175,7 +175,7 @@ class Bundle : public BundleInterface<NodeType> {
     // If there are no active RQs then we can recycle all edges, but the
     // newest (i.e., head). Similarly if the oldest active RQ is newer than
     // the newest entry, we can reclaim all older entries.
-    if (ts == BUNDLE_NULL_TIMESTAMP || pred.lock()->ts_ <= ts) {
+    if (ts == BUNDLE_NULL_TIMESTAMP || pred->ts_ <= ts) {
       pred->neighbors = {};
     } else {
       // Traverse from head and remove nodes that are lower than ts.
@@ -211,7 +211,7 @@ class Bundle : public BundleInterface<NodeType> {
     while(!Q.empty()){
       curr = Q.front();
       Q.pop_front();
-      if(curr.lock()->ptr_ == nullptr){
+      if(currƒ->ptr_ == nullptr){
         continue;
       } 
       auto x;
@@ -313,7 +313,7 @@ class Bundle : public BundleInterface<NodeType> {
     while(!queue.empty()){
       curr = queue.front();
       queue.pop_front();
-      ss << "<" << curr.lock()->ts_ << "," << curr.lock()->ptr_ << ">"
+      ss << "<" << curr->ts_ << "," << curr->ptr_ << ">"
          << "-->";
       auto x;
       for(x = curr->neighbors.begin(); x != curr->neighbors.end(); ++x){
