@@ -126,8 +126,13 @@ class Bundle : public BundleInterface<NodeType> {
               visitedNodes->visited_ = true;
               queue.push_back(visitedNodes);
             }
+            if(visitedNodes->ts_ <= ts){
+              goto endOfTheLoop;
+            }
         }
     }
+    endOfTheLoop:
+        curr = visitedNodes;
     for(auto& u : head_){
       if(u){
         u->visited_ = false;

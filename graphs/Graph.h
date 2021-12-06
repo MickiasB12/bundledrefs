@@ -19,7 +19,7 @@ class node_t;
 
 template <typename K, typename V, class RecManager>
 
-class Graph : {
+class Graph{
     private:
         RecManager* const recordmgr;
         RQProvider<K, V, node_t<K, V>, Graph<K, V, RecManager>, RecManager,
@@ -28,6 +28,7 @@ class Graph : {
         debugCounters* const counters;
 #endif
         nodeptr head;
+        std::vector<nodeptr> totalNodes;
         int validateLinks(const int tid, nodeptr pred, nodeptr curr);
         nodeptr new_node(const int tid, const K& key, const V& val, nodeptr next);
         long long debugKeySum(nodeptr head);
