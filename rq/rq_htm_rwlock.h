@@ -221,6 +221,59 @@ public:
     // replace the linearization point of an update that inserts or deletes nodes
     // with an invocation of this function if the linearization point is a WRITE
     template <typename T>
+    inline T linearize_update_at_write_for_unbundled_graphs(
+            const int tid,
+            T volatile * const lin_addr,
+            const T& lin_newval,
+            T volatile * const lin_addr2,
+            const T& lin_newval2,
+            NodeType * const * const insertedNodes,
+            NodeType * const * const deletedNodes){
+            if (!logicalDeletion) {
+            // physical deletion will happen at the same time as logical deletion
+            announce_physical_deletion(tid, deletedNodes);
+        }
+
+        // htm path
+        long long ts;
+        int limit = MAX_HTM_ATTEMPTS;
+        while (limit--) {
+            while (rwlock.isWriteLocked()) {}
+            if (XBEGIN() == _XBEGIN_STARTED) {
+                if (rwlock.isWriteLocked()) XABORT(1);
+                ts = timestamp;
+                lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
+                lin_addr2->neighbors.emplace_back(lin_newval2); // original linearization point
+                XEND();
+                ++threadData[tid].commitReader;
+                goto committed;
+            } else ++threadData[tid].abortReader;
+
+        }
+        
+        // fallback path
+        ++threadData[tid].fallback;
+        rwlock.readLock();
+        ts = timestamp;
+        lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
+    lin_addr2->neighbors.emplace_back(lin_newval2); // original linearization point
+        rwlock.readUnlock();
+
+committed:
+        set_insertion_timestamps(tid, ts, insertedNodes, deletedNodes);
+        set_deletion_timestamps(tid, ts, insertedNodes, deletedNodes);
+        
+        if (!logicalDeletion) {
+            // physical deletion will happen at the same time as logical deletion
+            physical_deletion_succeeded(tid, deletedNodes);
+        }
+        
+#if defined USE_RQ_DEBUGGING
+        DEBUG_RECORD_UPDATE_CHECKSUM<K,V>(tid, ts, insertedNodes, deletedNodes, ds);
+#endif
+        return lin_newval;     
+    }
+    template <typename T>
     inline T linearize_update_at_write(
             const int tid,
             T volatile * const lin_addr,

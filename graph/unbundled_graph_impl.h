@@ -5,7 +5,7 @@
 #include <csignal>
 #include <algorithm>
 #include <vector>
-#include "Graph.h"
+#include "unbundled_graph.h"
 #include "locks_impl.h"
 
 #ifndef casword_t
@@ -21,24 +21,25 @@ class node_t{
         std::vector<node_t*> neighbors;
         volatile int lock;
         volatile long long marked;
-        Bundle<node_t<K,V>> *rqbundle;
-        bool visited;
+        volatile long long itime;
+        volatile long long dtime;
+        volatile bool visited;
 
         ~node_t() {delete rqbundle;}
 
         template <typename RQProvider>
         bool isMarked(const int tid, RQProvider* const prov) {
-            return marked;
+            return prov->read_addr(tid, (casword_t *) &marked);
         }
 };
 
 template <typename K, typename V, class RecManager>
-Graph<K, V, RecManager>::Graph(const int numProcesses, const K _KEY_MIN, 
+unbundled_graph<K, V, RecManager>::unbundled_graph(const int numProcesses, const K _KEY_MIN, 
                               const K _KEY_MAX, const V _NO_VALUE)
 
 : recordmgr(new RecManager(numProcesses, SIGQUIT)),
   rqProvider(
-          new RQProvider<K, V, node_t<K, V>, bundle_lazylist<K, V, RecManager>,
+          new RQProvider<K, V, node_t<K, V>, unbundled_graph<K, V, RecManager>,
                          RecManager, true, false>(numProcesses, this,
                                                   recordmgr)),
 #ifdef USE_DEBUGCOUNTERS
@@ -53,17 +54,10 @@ Graph<K, V, RecManager>::Graph(const int numProcesses, const K _KEY_MIN,
   nodeptr max = new_node(tid, KEY_MAX, 0, NULL);
   head = new_node(tid, KEY_MIN, 0, NULL);
 
-  // Perform linearization of max to ensure bundles correctly added.
-  Bundle<node_t<K, V>>* bundles[] = {head->rqbundle, nullptr};
-  nodeptr ptrs[] = {max, nullptr};
-  rqProvider->prepare_bundles(bundles, ptrs);
-  timestamp_t lin_time =
-      rqProvider->linearize_update_at_write(tid, &head->neighbors[0], max);
-  rqProvider->finalize_bundles(bundles, lin_time);
 }
 
 template <typename K, typename V, class RecManager>
-Graph<K, V, RecManager>::~Graph(){
+unbundled_graph<K, V, RecManager>::~unbundled_graph(){
     const int dummyTid = 0;
     nodeptr curr;
     std::list<nodeptr> queue;
@@ -83,12 +77,11 @@ Graph<K, V, RecManager>::~Graph(){
     }
 
     delete rqProvider;
-    recordmgr->printStatus();
     delete recordmgr;
 }
 
 template <typename K, typename V, class RecManager>
-void Graph<K, V, RecManager>::initThread(const int tid){
+void unbundled_graph<K, V, RecManager>::initThread(const int tid){
     if (init[tid])
         return;
     else
@@ -99,7 +92,7 @@ void Graph<K, V, RecManager>::initThread(const int tid){
 }
 
 template <typename K, typename V, class RecManager>
-void Graph<K, V, RecManager>::deinitThread(const int tid){
+void unbundled_graph<K, V, RecManager>::deinitThread(const int tid){
     if (!init[tid])
         return;
     else
@@ -110,7 +103,7 @@ void Graph<K, V, RecManager>::deinitThread(const int tid){
 }
 
 template<typename K, typename V, class RecManager>
-nodeptr Graph<K, V, RecManager>::new_node(const int tid, const K &key,
+nodeptr unbundled_graph<K, V, RecManager>::new_node(const int tid, const K &key,
                                           const V& val,
                                           nodeptr adjNode){
 nodeptr nnode = recordmgr->template allocate<node_t<K, V>>(tid);
@@ -118,21 +111,20 @@ nodeptr nnode = recordmgr->template allocate<node_t<K, V>>(tid);
     cout << "out of memory" << endl;
     exit(1);
   }
+rqProvider->init_node(tid, nnode);
 nnode->key = key;
 nnode->val = val;
 nnode->neighbors.emplace_back(adjNode);
 nnode->marked = 0LL;
 nnode->lock = false;
 nnode->visited = false;
-nnode->rqbundle = new Bundle<node_t<K, V>>();
-nnode->rqbundle->init();
 vectorLock.lock();
 totalNodes.emplace_back(nnode);
 vectorLock.unlock();
 }
 
 template<typename K, typename V, class RecManager>
-bool Graph<K, V, RecManager>::contains(const int tid, const K& key){
+bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
     recordmgr->leaveQuiescentState(tid, true);
     nodeptr curr;
     std::list<nodeptr> queue;
@@ -174,7 +166,7 @@ bool Graph<K, V, RecManager>::contains(const int tid, const K& key){
 }
 
 template <typename K, typename V, class RecManager>
-V Graph<K, V, RecManager>::doInsert(const int tid, const K& key,
+V unbundled_graph<K, V, RecManager>::doInsert(const int tid, const K& key,
                                     const V& val, bool onlyIfAbsent){
     nodeptr pred;
     nodeptr curr;
@@ -205,7 +197,7 @@ V Graph<K, V, RecManager>::doInsert(const int tid, const K& key,
                 return result;
             }
             cout << "ERROR: insert-replace functionality not implemented for "
-                "graph_bundled at this time."
+                "unbundled_graph_bundled at this time."
              << endl;
             exit(-1);
         }
@@ -213,51 +205,45 @@ V Graph<K, V, RecManager>::doInsert(const int tid, const K& key,
         result = NO_VALUE;
         newnode = new_node(tid, key, val, nullptr);
         // curr->neighbors.emplace_back(newnode);
-
-        Bundle<node_t<K,V>> *bundles[] = {newnode->rqbundle, pred->rqbundle, nullptr};
-        nodeptr ptrs[] = {curr, newnode, nullptr};
-        rqProvider->prepare_bundles(bundles, ptrs);
+        nodeptr insertedNodes[] = {newnode, NULL};
+        nodeptr deletedNodes[] = {NULL};
 
         // Perform original linearization.
-        timestamp_t lin_time =
-          rqProvider->linearize_update_at_write_for_graphs(tid, &pred, newnode, &newnode, curr);
-        
-        // Finalize bundles.
-        rqProvider->finalize_bundles(bundles, lin_time);
+        rqProvider->linearize_update_at_write_for_unbundled_graphs(tid, &pred, newnode, &newnode, curr, insertedNodes, deletedNodes);
+    
         releaseLock(&(curr->lock));
         releaseLock(&(pred->lock));
         recordmgr->enterQuiescentState(tid);
         return result;
     }
 }
-void Graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key, timestamp_t& lin_time){
-    for(auto& x : xnode->neighbors){
+void unbundled_graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key){
+    for(auto& x : node->neighbors){
         if(x->key == key){
-            acquireLock(&(x->lock));
-            Bundle<node_t<K, V>>* bundles[] = {x->rqbundle, nullptr};
-            nodeptr ptrs[] = {nullptr, nullptr};
-            rqProvider->prepare_bundles(bundles, ptrs);
-            rqProvider->finalize_bundles(bundles, lin_time);
+            acquireLock(&(node->lock))
             node->neighbors.erase(std::remove(node->neighbors.begin(), node->neighbors.end(),x), node->neighbors.end());
-            releaseLock(&(x->lock));
+            releaseLock(&(node->lock));
+            break;
         }
     }
 }
-V Graph<K, V, RecManager>::erase(const int tid, const K& key){
+V unbundled_graph<K, V, RecManager>::erase(const int tid, const K& key){
     nodeptr pred;
     nodeptr curr;
     V result = NO_VALUE;
     std::list<nodeptr> queue;
-    timestamp_t lin_time = get_update_lin_time(tid);;
     while(true){
         recordmgr->leaveQuiescentState(tid);
         for(auto& u : totalNodes){
             if(u->key == key){
-                result = u->value;
+                
                 acquireLock(&(u->lock));
-                lin_time = rqProvider->linearize_update_at_write(tid, &u->marked, 1LL);
+                 nodeptr insertedNodes[] = {NULL};
+                nodeptr deletedNodes[] = {u, NULL};
+                result = u->value;
+                rqProvider->linearize_update_at_write_for_unbundled_graphs(tid, &u->marked, 1LL, insertedNodes, deletedNodes);
                 u->neighbors.clear();
-                nodeptr deletedNodes[] = {u, nullptr};
+                 rqProvider->announce_physical_deletion(tid, deletedNodes);
                 rqProvider->physical_deletion_succeeded(tid, deletedNodes);
                 vectorLock.lock();
                 totalNodes.erase(std::remove(totalNodes.begin(), totalNodes.end(), u), totalNodes.end());
@@ -265,40 +251,9 @@ V Graph<K, V, RecManager>::erase(const int tid, const K& key){
                 releaseLock(&(u->lock));
             }
             else{
-                eraseNeighbors(u, key, lin_time)
+                eraseNeighbors(u, key);
             }
         }
-        // queue.push_back(head);
-
-        // while(!queue.empty()){
-        //     curr = queue.front();
-        //     queue.pop_front();
-        //     if((curr->key == key)){
-        //         result = curr->val;
-        //         goto endOfTheLoop;
-        //     }
-        //         for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-        //             if(!x->visited){
-        //                 x->visited = true;
-        //                 queue.push_back(x);
-        //             }
-        //             if((x->key == key)){
-        //                 curr = x;
-        //                 goto endOfTheLoop;
-        //             }
-        //         }
-        // }
-        // if(curr->key != key){
-        //     result = NO_VALUE;
-        //     recordmgr->enterQuiescentState(tid);
-        //     return result;
-        // }
-        // endOfTheLoop:
-        //     acquireLock(&(curr->lock));
-        //     assert(curr->key == key);
-        //     result = curr->val;
-
-        //     Bundle<node_t<K, V>>* bundles[] = {}
 
 
         recordmgr->enterQuiescentState(tid);
@@ -308,102 +263,44 @@ V Graph<K, V, RecManager>::erase(const int tid, const K& key){
 }
 
 template<typename K, typename V, class RecManager>
-int Graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
+int unbundled_graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
                                         const K& hi, 
                                         K* const resultKeys,
                                         V* const resultValues){
 
     timestamp_t ts;
     int cnt = 0;
-    std::vector<nodeptr> adjList;
-    
-        recordmgr->leaveQuiescentState(tid, true);
-
-        // Read gloabl timestamp and announce self.
-        ts = rqProvider->start_traversal(tid);
-        adjList = head->rqbundle->getPtrByTimestamp(ts);
-        nodeptr curr;
-        while(!adjList.empty){
-            for(curr : adjList){
-                if((curr) && (curr->key <= hi || curr->key >= lo)){
-                    cnt += getKeys(tid, curr, resultKeys + cnt, resultValues + cnt);
-                }
-            }
-            adjList = curr->rqbundle->getPtrByTimestamp(ts);
-        }
-        
-        // Clears entry in active range query array.
-        rqProvider->end_traversal(tid);
-        recordmgr->enterQuiescentState(tid);
-
-        // Traversal was completed successfully.
-        return cnt;
-}
-
-template <typename K, typename V, class RecManager>
-void Graph<K, V, RecManager>::cleanup(int tid){
-    // Walk the list using the newest edge and reclaim bundle entries.
     std::list<nodeptr> queue;
     nodeptr curr;
-    recordmgr->leaveQuiescentState(tid); 
-    BUNDLE_INIT_CLEANUP(rqProvider);
-    while (head == nullptr);
+    recordmgr->leaveQuiescentState(tid, true);
+    rqProvider->traversal_start(tid);
     queue.push_back(head);
-   while(!queue.empty()){
+    while(!queue.empty()){
         curr = queue.front();
         queue.pop_front();
-        if(curr->key != KEY_MAX){
-            BUNDLE_CLEAN_BUNDLE(curr->rqbundle);
+        if(curr->key <= hi && curr->low && !curr->marked){
+            rqProvider->traversal_try_add(tid, curr, resultKeys, resultValues, &cnt, lo, hi);
         }
-                for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
+        for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
+                if(!x->visited){
                         x->visited = true;
                         queue.push_back(x);
-                    }
                 }
+        }
     }
     for(auto& u : totalNodes){
       if(u){
         u->visited = false;
       }
     }
-
+    rqProvider->traversal_end(tid, resultKeys, resultValues, &cnt, lo, hi);
     recordmgr->enterQuiescentState(tid);
+    return cnt;
 }
 
-template <typename K, typename V, class RecManager>
-bool Graph<K, V, RecManager>::validateBundles(int tid){
-    nodeptr curr;
-    nodeptr temp;
-    timestamp_t ts;
-    std::list<nodeptr> queue;
-    queue.push_back(head);
-    bool valid = true;
-#ifdef BUNDLE_DEBUG
-     while(!queue.empty()){
-        curr = queue.front();
-        queue.pop_front();
-        if(curr->key < KEY_MAX){
-            result += curr->key;
-        }
-                for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x);
-                    }
-                }
-    }
-    for(auto& u : totalNodes){
-      if(u){
-        u->visited = false;
-      }
-    }
-#endif
-    return valid;
-}
 
 template <typename K, typename V, class RecManager>
-long long Graph<K, V, RecManager>::debugKeySum(nodeptr head){
+long long unbundled_graph<K, V, RecManager>::debugKeySum(nodeptr head){
     long long result = 0;
     std::list<nodeptr> queue;
     queue.push_back(head);
@@ -429,13 +326,13 @@ long long Graph<K, V, RecManager>::debugKeySum(nodeptr head){
 }
 
 template <typename K, typename V, class RecManager>
-long long Graph<K, V, RecManager>::debugKeySum(){
+long long unbundled_graph<K, V, RecManager>::debugKeySum(){
     return debugKeySum(head);
 }
 
 
 template <typename K, typename V, class RecManager>
-inline bool Graph<K, V, RecManager>::isLogicallyDeleted(const int tid, node_t<K, V>* node){
+inline bool unbundled_graph<K, V, RecManager>::isLogicallyDeleted(const int tid, node_t<K, V>* node){
     return node->isMarked(tid, rqProvider);
 }
 

@@ -33,8 +33,7 @@ class Graph{
         nodeptr head;
         std::vector<nodeptr> totalNodes;
         std::mutex vectorLock;
-        int validateLinks(const int tid, nodeptr pred, nodeptr curr);
-        nodeptr new_node(const int tid, const K& key, const V& val, nodeptr next);
+        nodeptr new_node(const int tid, const K& key, const V& val, nodeptr adjNode);
         long long debugKeySum(nodeptr head);
 
         V doInsert(const int tid, const K& key, const V& value, bool onlyIfAbsent);
@@ -84,9 +83,6 @@ class Graph{
             queue.push_back(head);
             std::vector<nodeptr> revert_visited;
             long long size = 0;
-            if(head != null){
-                ++size;
-            }
             head->visited = true;
             nodeptr curr;
             while(!queue.empty()){
@@ -95,11 +91,11 @@ class Graph{
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
                     if(!x->visited){
                         x->visited = true;
-                        queue.push_back(x);
-                        revert_visited.push_back(x);
-                        ++size;
+                        queue.push_back(x); 
                     }
                 }
+                revert_visited.push_back(curr);
+                ++size;
             }
             for(auto& u: revert_visited){
                 if(u){

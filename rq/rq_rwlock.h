@@ -205,6 +205,39 @@ private:
     
 public:
 
+    template <typename T>
+    inline T linearize_update_at_write_for_unbundled_graphs(
+            const int tid,
+            T volatile * const lin_addr,
+            const T& lin_newval,
+            T volatile * const lin_addr2,
+            const T& lin_newval2,
+            NodeType * const * const insertedNodes,
+            NodeType * const * const deletedNodes){
+            if (!logicalDeletion) {
+            // physical deletion will happen at the same time as logical deletion
+            announce_physical_deletion(tid, deletedNodes);
+        }
+        
+        rwlock.readLock();
+        long long ts = timestamp;
+        lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
+    lin_addr2->neighbors.emplace_back(lin_newval2); // original linearization point
+        rwlock.readUnlock();
+
+        set_insertion_timestamps(tid, ts, insertedNodes, deletedNodes);
+        set_deletion_timestamps(tid, ts, insertedNodes, deletedNodes);
+        
+        if (!logicalDeletion) {
+            // physical deletion will happen at the same time as logical deletion
+            physical_deletion_succeeded(tid, deletedNodes);
+        }
+        
+#if defined USE_RQ_DEBUGGING
+        DEBUG_RECORD_UPDATE_CHECKSUM<K,V>(tid, ts, insertedNodes, deletedNodes, ds);
+#endif
+        return lin_newval;
+    }
     // replace the linearization point of an update that inserts or deletes nodes
     // with an invocation of this function if the linearization point is a WRITE
     template <typename T>

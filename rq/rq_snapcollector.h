@@ -197,7 +197,39 @@ public:
             recmgr->retire(tid, deletedNodes[i]);
         }
     }
-    
+    template <typename T>
+    inline T linearize_update_at_write_for_unbundled_graphs(
+            const int tid,
+            T volatile * const lin_addr,
+            const T& lin_newval,
+            T volatile * const lin_addr2,
+            const T& lin_newval2,
+            NodeType * const * const insertedNodes,
+            NodeType * const * const deletedNodes){
+                assert((insertedNodes[0] && !deletedNodes[0])
+                || (!insertedNodes[0] && deletedNodes[0]));
+
+#ifdef RQ_USE_TIMESTAMPS
+        if (pthread_rwlock_rdlock(&rwlock)) error("could not read-lock rwlock");
+        long long ts = timestamp;
+#else
+        long long ts = 1;
+#endif
+
+         lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
+    lin_addr2->neighbors.emplace_back(lin_newval2);// original linearization point
+#ifdef RQ_USE_TIMESTAMPS
+        if (pthread_rwlock_unlock(&rwlock)) error("could not read-unlock rwlock");
+#endif
+        
+        if (insertedNodes[0]) insert_readonly_report_target_key(tid, insertedNodes[0]);
+        if (deletedNodes[0]) delete_report_target_key(tid, deletedNodes[0]);
+
+#if defined USE_RQ_DEBUGGING
+        DEBUG_RECORD_UPDATE_CHECKSUM<K,V>(tid, ts, insertedNodes, deletedNodes, ds);
+#endif
+        return lin_newval;
+    }
     // replace the linearization point of an update that inserts or deletes nodes
     // with an invocation of this function if the linearization point is a WRITE
     template <typename T>
