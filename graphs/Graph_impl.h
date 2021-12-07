@@ -3,7 +3,8 @@
 
 #include <cassert>
 #include <csignal>
-
+#include <algorithm>
+#include <vector>
 #include "Graph.h"
 #include "locks_impl.h"
 
@@ -48,6 +49,7 @@ Graph<K, V, RecManager>::Graph(const int numProcesses, const K _KEY_MIN,
     NO_VALUE(_NO_VALUE){
     const int tid = 0;
   initThread(tid);
+
   nodeptr max = new_node(tid, KEY_MAX, 0, NULL);
   head = new_node(tid, KEY_MIN, 0, NULL);
 
@@ -124,7 +126,9 @@ nnode->lock = false;
 nnode->visited = false;
 nnode->rqbundle = new Bundle<node_t<K, V>>();
 nnode->rqbundle->init();
+vectorLock.lock();
 totalNodes.emplace_back(nnode);
+vectorLock.unlock();
 }
 
 template<typename K, typename V, class RecManager>
@@ -226,52 +230,81 @@ V Graph<K, V, RecManager>::doInsert(const int tid, const K& key,
         return result;
     }
 }
+void Graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key, timestamp_t& lin_time){
+    for(auto& x : node->neighbors){
+        if(x->key == key){
+            acquireLock(&(x->lock));
+            Bundle<node_t<K, V>>* bundles[] = {x->rqbundle, nullptr};
+            nodeptr ptrs[] = {nullptr, nullptr};
+            rqProvider->prepare_bundles(bundles, ptrs);
+            rqProvider->finalize_bundles(bundles, lin_time);
+            node->neighbors.erase(std::remove(node->neighbors.begin(), node->neighbors.end(),x), node->neighbors.end());
+            releaseLock(&(x->lock));
+        }
+    }
+}
+V Graph<K, V, RecManager>::erase(const int tid, const K& key){
+    nodeptr pred;
+    nodeptr curr;
+    V result;
+    std::list<nodeptr> queue;
+    timestamp_t lin_time = get_update_lin_time(tid);;
+    while(true){
+        recordmgr->leaveQuiescentState(tid);
+        for(auto& u : totalNodes){
+            if(u->key == key){
+                acquireLock(&(u->lock));
+                lin_time = rqProvider->linearize_update_at_write(tid, &u->marked, 1LL);
+                u->neighbors.clear();
+                nodeptr deletedNodes[] = {u, nullptr};
+                rqProvider->physical_deletion_succeeded(tid, deletedNodes);
+                vectorLock.lock();
+                totalNodes.erase(std::remove(totalNodes.begin(), totalNodes.end(), u), totalNodes.end());
+                vectorLock.unlock();
+                releaseLock(&(u->lock));
+            }
+            else{
+                eraseNeighbors(u, key, lin_time)
+            }
+        }
+        if
+        // queue.push_back(head);
 
-// V Graph<K, V, RecManager>::erase(const int tid, const K& key){
-//     nodeptr pred;
-//     nodeptr curr;
-//     V result;
-//     std::list<nodeptr> queue;
-//     while(true){
-//         recordmgr->leaveQuiescentState(tid);
-//         queue.push_back(head);
+        // while(!queue.empty()){
+        //     curr = queue.front();
+        //     queue.pop_front();
+        //     if((curr->key == key)){
+        //         result = curr->val;
+        //         goto endOfTheLoop;
+        //     }
+        //         for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
+        //             if(!x->visited){
+        //                 x->visited = true;
+        //                 queue.push_back(x);
+        //             }
+        //             if((x->key == key)){
+        //                 curr = x;
+        //                 goto endOfTheLoop;
+        //             }
+        //         }
+        // }
+        // if(curr->key != key){
+        //     result = NO_VALUE;
+        //     recordmgr->enterQuiescentState(tid);
+        //     return result;
+        // }
+        // endOfTheLoop:
+        //     acquireLock(&(curr->lock));
+        //     assert(curr->key == key);
+        //     result = curr->val;
 
-//         while(!queue.empty()){
-//             curr = queue.front();
-//             queue.pop_front();
-//             if((curr->key == key)){
-//                 result = curr->val;
-//                 goto endOfTheLoop;
-//             }
-//                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-//                     if(!x->visited){
-//                         x->visited = true;
-//                         queue.push_back(x);
-//                     }
-//                     if((x->key == key)){
-//                         curr = x;
-//                         result = x->val;
-//                         goto endOfTheLoop;
-//                     }
-//                 }
-//         }
-//         if(curr->key != key){
-//             result = NO_VALUE;
-//             recordmgr->enterQuiescentState(tid);
-//             return result;
-//         }
-//         endOfTheLoop:
-//             acquireLock(&(curr->lock));
-//             assert(curr->key == key);
-//             result = curr->val;
-
-//             Bundle<node_t<K, V>>* bundles[] = {}
+        //     Bundle<node_t<K, V>>* bundles[] = {}
 
 
+        recordmgr->enterQuiescentState(tid);
+    }
 
-//     }
-
-//}
+}
 
 template<typename K, typename V, class RecManager>
 int Graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
@@ -281,31 +314,29 @@ int Graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
 
     timestamp_t ts;
     int cnt = 0;
-    nodeptr curr;
-    for(;;){
+    std::vector<nodeptr> adjList;
+    
         recordmgr->leaveQuiescentState(tid, true);
 
         // Read gloabl timestamp and announce self.
         ts = rqProvider->start_traversal(tid);
-        curr = head->rqbundle->getPtrByTimestamp(ts);
-        while(curr != nullptr){
-            if(curr->key > hi || curr->key < lo){
-                curr = curr->rqbundle->getPtrByTimestamp(ts);
+        adjList = head->rqbundle->getPtrByTimestamp(ts);
+        nodeptr curr;
+        while(!adjList.empty){
+            for(curr : adjList){
+                if((curr) && (curr->key <= hi || curr->key >= lo)){
+                    cnt += getKeys(tid, curr, resultKeys + cnt, resultValues + cnt);
+                }
             }
-            else{
-                cnt += getKeys(tid, curr, resultKeys + cnt, resultValues + cnt);
-                curr = curr->rqbundle->getPtrByTimestamp(ts);
-            }
+            adjList = curr->rqbundle->getPtrByTimestamp(ts);
         }
+        
         // Clears entry in active range query array.
         rqProvider->end_traversal(tid);
         recordmgr->enterQuiescentState(tid);
 
         // Traversal was completed successfully.
-        if (curr != nullptr) {
-            return cnt;
-        }
-    }
+        return cnt;
 }
 
 template <typename K, typename V, class RecManager>

@@ -30,6 +30,7 @@ class BundleEntryBase {
     }
   
   void mark(timestamp_t ts) { deleted_ts_ = ts; }
+  timestamp_t marked() { return deleted_ts_; }
 
 
 };

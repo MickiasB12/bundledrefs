@@ -12,7 +12,8 @@
 #include <list>
 #include <atomic>
 #include <mutex>
-
+#include <vector>
+#include <algorithm>
 #include "graph_common_bundle.h"
 #include "plaf.h"
 #include "rq_debugging.h"
@@ -98,8 +99,8 @@ class Bundle : public BundleInterface<NodeType> {
     entry->ts_ = ts;
   }
 
-  // Returns a reference to the node that immediately followed at timestamp ts.
-  inline NodeType *getPtrByTimestamp(timestamp_t ts) override {
+  // Returns a vector of references to the nodes that immediately followed at timestamp ts.
+  std::vector<NodeType *> getPtrByTimestamp(timestamp_t ts) override {
     // Start at head and work backwards until edge is found.
     auto size = head_.size();
     auto curr = head_.get(0);
@@ -108,6 +109,7 @@ class Bundle : public BundleInterface<NodeType> {
       // DEBUG_PRINT("getPtrByTimestamp");
       CPU_RELAX;
     }
+    std::vector<NodeType *> returnList;
    
     curr->visited_ = true;
     std::list<<BundleEntryBase<NodeType> *> queue;
@@ -116,23 +118,21 @@ class Bundle : public BundleInterface<NodeType> {
     // vertices of a vertex
     auto visitedNodes;
 
-    while(!queue.empty() && curr->ts_ > ts){
+    while(!queue.empty()){
         curr = queue.front();
         queue.pop_front();
-
+        if(curr->ts_ <= ts){
+            returnList.push_back(curr->ptr_);
+        }
       for(visitedNodes = curr->neighbors.begin(); 
           visitedNodes != curr->neighbors.end(); ++visitedNodes){
             if(!visitedNodes->visited_){
               visitedNodes->visited_ = true;
               queue.push_back(visitedNodes);
             }
-            if(visitedNodes->ts_ <= ts){
-              goto endOfTheLoop;
-            }
         }
     }
-    endOfTheLoop:
-        curr = visitedNodes;
+    
     for(auto& u : head_){
       if(u){
         u->visited_ = false;
@@ -144,7 +144,7 @@ class Bundle : public BundleInterface<NodeType> {
       exit(1);
     }
 #endif
-    return curr->ptr_;
+    return returnList;
   }
 
   // Reclaims any edges that are older than ts. At the moment this should be
@@ -216,7 +216,7 @@ class Bundle : public BundleInterface<NodeType> {
     while(!Q.empty()){
       curr = Q.front();
       Q.pop_front();
-      if(currƒ->ptr_ == nullptr){
+      if(curr->ptr_ == nullptr){
         continue;
       } 
       auto x;

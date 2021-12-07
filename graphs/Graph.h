@@ -3,7 +3,10 @@
 
 #include <stack>
 #include <unordered_set>
+#include <algorithm>
 #include <list>
+#include <mutex>
+#include <vector>
 #ifndef MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY
 // define BEFORE including rq_provider.h
 #define MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY 4
@@ -29,6 +32,7 @@ class Graph{
 #endif
         nodeptr head;
         std::vector<nodeptr> totalNodes;
+        std::mutex vectorLock;
         int validateLinks(const int tid, nodeptr pred, nodeptr curr);
         nodeptr new_node(const int tid, const K& key, const V& val, nodeptr next);
         long long debugKeySum(nodeptr head);
