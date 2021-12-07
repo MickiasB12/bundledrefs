@@ -9,7 +9,7 @@
 #define MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY 4
 #endif
 #include "Graph_impl.h"
-#include "rq_bundle.h"
+#include "graph_rq_bundle.h"
 
 
 template <typename K, typename V>

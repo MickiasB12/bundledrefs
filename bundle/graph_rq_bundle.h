@@ -14,12 +14,7 @@
 #endif
 #endif
 
-#if defined BUNDLE_CIRCULAR_BUNDLE
-#include "circular_bundle.h"
-#elif defined BUNDLE_LINKED_BUNDLE
-#include "linked_bundle.h"
-#elif defined BUNDLE_UNSAFE_BUNDLE
-#include "unsafe_linked_bundle.h"
+#include "graph_linked_bundle.h"
 #else
 #error NO BUNDLE TYPE DEFINED
 #endif
@@ -263,6 +258,21 @@ class RQProvider {
     SOFTWARE_BARRIER;
     timestamp_t lin_time = get_update_lin_time(tid);
     *lin_addr = lin_newval;  // Original linearization point.
+    SOFTWARE_BARRIER;
+    return lin_time;
+  }
+
+  template <typename T>
+  inline timestamp_t linearize_update_at_write_for_graphs(const int tid,
+                                               T volatile *const lin_addr,
+                                               const T &lin_newval, 
+                                               T volatile *const lin_addr2,
+                                               const T &lin_newval2) {
+    // Get update linearization timestamp.
+    SOFTWARE_BARRIER;
+    timestamp_t lin_time = get_update_lin_time(tid);
+    lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
+    lin_addr2->neighbors.emplace_back(lin_newval2);
     SOFTWARE_BARRIER;
     return lin_time;
   }

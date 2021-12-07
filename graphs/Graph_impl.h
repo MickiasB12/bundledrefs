@@ -294,6 +294,7 @@ int Graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
             }
             else{
                 cnt += getKeys(tid, curr, resultKeys + cnt, resultValues + cnt);
+                curr = curr->rqbundle->getPtrByTimestamp(ts);
             }
         }
         // Clears entry in active range query array.
@@ -360,6 +361,11 @@ bool Graph<K, V, RecManager>::validateBundles(int tid){
                     }
                 }
     }
+    for(auto& u : totalNodes){
+      if(u){
+        u->visited = false;
+      }
+    }
 #endif
     return valid;
 }
@@ -381,6 +387,11 @@ long long Graph<K, V, RecManager>::debugKeySum(nodeptr head){
                         queue.push_back(x);
                     }
                 }
+    }
+    for(auto& u : totalNodes){
+      if(u){
+        u->visited = false;
+      }
     }
     return result;
 }
