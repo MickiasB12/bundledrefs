@@ -231,7 +231,7 @@ V Graph<K, V, RecManager>::doInsert(const int tid, const K& key,
     }
 }
 void Graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key, timestamp_t& lin_time){
-    for(auto& x : node->neighbors){
+    for(auto& x : xnode->neighbors){
         if(x->key == key){
             acquireLock(&(x->lock));
             Bundle<node_t<K, V>>* bundles[] = {x->rqbundle, nullptr};
@@ -246,13 +246,14 @@ void Graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key, timesta
 V Graph<K, V, RecManager>::erase(const int tid, const K& key){
     nodeptr pred;
     nodeptr curr;
-    V result;
+    V result = NO_VALUE;
     std::list<nodeptr> queue;
     timestamp_t lin_time = get_update_lin_time(tid);;
     while(true){
         recordmgr->leaveQuiescentState(tid);
         for(auto& u : totalNodes){
             if(u->key == key){
+                result = u->value;
                 acquireLock(&(u->lock));
                 lin_time = rqProvider->linearize_update_at_write(tid, &u->marked, 1LL);
                 u->neighbors.clear();
@@ -267,7 +268,6 @@ V Graph<K, V, RecManager>::erase(const int tid, const K& key){
                 eraseNeighbors(u, key, lin_time)
             }
         }
-        if
         // queue.push_back(head);
 
         // while(!queue.empty()){
@@ -302,6 +302,7 @@ V Graph<K, V, RecManager>::erase(const int tid, const K& key){
 
 
         recordmgr->enterQuiescentState(tid);
+        return result;
     }
 
 }
