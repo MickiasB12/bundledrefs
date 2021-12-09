@@ -242,8 +242,8 @@ public:
             if (XBEGIN() == _XBEGIN_STARTED) {
                 if (rwlock.isWriteLocked()) XABORT(1);
                 ts = timestamp;
-                lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
-                lin_addr2->neighbors.emplace_back(lin_newval2); // original linearization point
+                (*lin_addr)->neighbors.emplace_back(lin_newval);  // Original linearization point.
+                (*lin_addr2)->neighbors.emplace_back(lin_newval2); / original linearization point
                 XEND();
                 ++threadData[tid].commitReader;
                 goto committed;
@@ -255,8 +255,8 @@ public:
         ++threadData[tid].fallback;
         rwlock.readLock();
         ts = timestamp;
-        lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
-    lin_addr2->neighbors.emplace_back(lin_newval2); // original linearization point
+        (*lin_addr)->neighbors.emplace_back(lin_newval);  // Original linearization point.
+        (*lin_addr2)->neighbors.emplace_back(lin_newval2);  // original linearization point
         rwlock.readUnlock();
 
 committed:

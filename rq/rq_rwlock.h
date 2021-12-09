@@ -221,8 +221,8 @@ public:
         
         rwlock.readLock();
         long long ts = timestamp;
-        lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
-    lin_addr2->neighbors.emplace_back(lin_newval2); // original linearization point
+        (*lin_addr)->neighbors.emplace_back(lin_newval);  // Original linearization point.
+        (*lin_addr2)->neighbors.emplace_back(lin_newval2); // original linearization point
         rwlock.readUnlock();
 
         set_insertion_timestamps(tid, ts, insertedNodes, deletedNodes);
