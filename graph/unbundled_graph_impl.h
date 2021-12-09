@@ -220,7 +220,7 @@ template<typename K, typename V, class RecManager>
 void unbundled_graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key){
     for(auto& x : node->neighbors){
         if(x->key == key){
-            acquireLock(&(node->lock))
+            acquireLock(&(node->lock));
             node->neighbors.erase(std::remove(node->neighbors.begin(), node->neighbors.end(),x), node->neighbors.end());
             releaseLock(&(node->lock));
             break;

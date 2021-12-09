@@ -374,7 +374,7 @@ const test_type KEY_MAX = numeric_limits<test_type>::max()-1; // must be less th
     #include "record_manager.h"
     #include "unbundled_graph_impl.h"
 
-    #define DS_DECLARATION lazylist<test_type, test_type, MEMMGMT_T>
+    #define DS_DECLARATION unbundled_graph<test_type, test_type, MEMMGMT_T>
     #define MEMMGMT_T record_manager<RECLAIM, ALLOC, POOL, node_t<test_type, test_type> >
     #define DS_CONSTRUCTOR new DS_DECLARATION(TOTAL_THREADS, KEY_MIN, KEY_MAX, NO_VALUE)
 
