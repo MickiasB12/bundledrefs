@@ -94,9 +94,9 @@ class unbundled_graph{
                 curr = queue.front();
                 queue.pop_front();
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x); 
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x); 
                     }
                 }
                 revert_visited.push_back(curr);
@@ -121,8 +121,8 @@ class unbundled_graph{
                 queue.pop_front();
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
                     if(!(*x)->visited){
-                        x->visited = true;
-                        queue.push_back(x); 
+                        (*x)->visited = true;
+                        queue.push_back(*x); 
                     }
                 }
                 revert_visited.push_back(curr);

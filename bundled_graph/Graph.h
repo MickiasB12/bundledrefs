@@ -1,5 +1,5 @@
-#ifndef LAZYLIST_H
-#define LAZYLIST_H
+#ifndef GRAPH_H
+#define GRAPH_H
 
 #include <stack>
 #include <unordered_set>
@@ -79,6 +79,7 @@ class Graph{
         void clearCounters() { counters->clear(); }
 #endif
         long long debugKeySum();
+
         long long getSizeInNodes() {
             std::list<nodeptr> queue;
             queue.push_back(head);
@@ -90,9 +91,9 @@ class Graph{
                 curr = queue.front();
                 queue.pop_front();
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x); 
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x); 
                     }
                 }
                 revert_visited.push_back(curr);
@@ -105,6 +106,37 @@ class Graph{
             }
             return size;
         }
+        long long getSize() {
+            std::list<nodeptr> queue;
+            queue.push_back(head);
+            std::vector<nodeptr> revert_visited;
+            long long size = 0;
+            head->visited = true;
+            nodeptr curr;
+            while(!queue.empty()){
+                curr = queue.front();
+                queue.pop_front();
+                for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x); 
+                    }
+                }
+                revert_visited.push_back(curr);
+                size += (!curr->marked);
+            }
+            for(auto& u: revert_visited){
+                if(u){
+                    u->visited = false;
+                }
+            }
+            return size;
+        }
+          string getSizeString() {
+            stringstream ss;
+            ss<<getSizeInNodes()<<" nodes in data structure";
+            return ss.str();
+          }
 
         RecManager* const debugGetRecMgr() { return recordmgr; }
 

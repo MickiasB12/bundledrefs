@@ -138,19 +138,19 @@ bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
             goto endOfTheLoop;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x);
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x);
                     }
-                    if((x->key == key) && !x->marked){
-                        res = x->val;
+                    if(((*x)->key == key) && !(*x)->marked){
+                        res = (*x)->val;
                         goto endOfTheLoop;
                     }
                 }
     }
     endOfTheLoop:
         if(res!= NO_VALUE){
-            check = true;
+            check = true
         }
     for(auto& u : totalNodes){
         if(u){
@@ -283,9 +283,9 @@ int unbundled_graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
             rqProvider->traversal_try_add(tid, curr, resultKeys, resultValues, &cnt, lo, hi);
         }
         for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                if(!(x->visited)){
-                        x->visited = true;
-                        queue.push_back(x);
+                if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x);
                 }
         }
     }
@@ -313,9 +313,9 @@ long long unbundled_graph<K, V, RecManager>::debugKeySum(nodeptr head){
             result += curr->key;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x);
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x);
                     }
                 }
     }

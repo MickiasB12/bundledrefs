@@ -1,5 +1,5 @@
-#ifndef LAZYLIST_IMPL_H
-#define LAZYLIST_IMPL_H
+#ifndef GRAPH_IMPL_H
+#define GRAPH_IMPL_H
 
 #include <cassert>
 #include <csignal>
@@ -148,12 +148,12 @@ bool Graph<K, V, RecManager>::contains(const int tid, const K& key){
             goto endOfTheLoop;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x);
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x);
                     }
-                    if((x->key == key) && !x->marked){
-                        res = x->val;
+                    if(((*x)->key == key) && !(*x)->marked){
+                        res = (*x)->val;
                         goto endOfTheLoop;
                     }
                 }
@@ -387,9 +387,9 @@ long long Graph<K, V, RecManager>::debugKeySum(nodeptr head){
             result += curr->key;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x);
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x);
                     }
                 }
     }
