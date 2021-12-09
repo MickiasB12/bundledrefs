@@ -27,7 +27,6 @@
 #elif defined GRAPH_RQ_BUNDLE
 #include "graph_rq_bundle.h"
 #else
-#else
 #error NO RQ PROVIDER DEFINED
 #endif
 
