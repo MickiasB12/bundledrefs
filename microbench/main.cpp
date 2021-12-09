@@ -861,6 +861,13 @@ void printOutput() {
 #endif
 #endif
 
+#ifdef GRAPH_RQ_BUNDLE
+#ifdef BUNDLE_PRINT_BUNDLE_STATS
+  COUTATOMIC(ds->getBundleStatsString() << flush);
+  COUTATOMIC(endl);
+#endif
+#endif
+
 #if defined(USE_DEBUGCOUNTERS) || defined(USE_GSTATS)
   cout << "begin papi_print_counters..." << endl;
   papi_print_counters(totalAll);
@@ -946,6 +953,25 @@ int main(int argc, char **argv) {
 #ifdef RQ_BUNDLE
 #if defined BUNDLE_LINKED_BUNDLE
   cout << "BUNDLE_TYPE=linked" << endl;
+#elif defined BUNDLE_CIRCULAR_BUNDLE
+  cout << "BUNDLE_TYPE=circular" << endl;
+#endif
+#if defined BUNDLE_CLEANUP_BACKGROUND
+  cout << "BUNDLE_CLEANUP=background" << endl;
+  cout << "BUNDLE_CLEANUP_SLEEP=" << BUNDLE_CLEANUP_SLEEP << endl;
+#elif defined BUNDLE_CLEANUP_UPDATE
+  cout << "BUNDLE_CLEANUP=update" << endl;
+#else
+  cout << "BUNDLE_CLEANUP=none" << endl;
+#endif
+#if defined BUNDLE_TIMESTAMP_RELAXATION
+  cout << "BUNDLE_TIMESTAMP_RELAXATION=" << BUNDLE_TIMESTAMP_RELAXATION << endl;
+#endif
+#endif
+
+#ifdef GRAPH_RQ_BUNDLE
+#if defined BUNDLE_GRAPH_BUNDLE
+  cout << "BUNDLE_TYPE=Graph" << endl;
 #elif defined BUNDLE_CIRCULAR_BUNDLE
   cout << "BUNDLE_TYPE=circular" << endl;
 #endif

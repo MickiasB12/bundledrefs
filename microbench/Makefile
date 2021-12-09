@@ -49,6 +49,7 @@ LDFLAGS += -I../dcss_plus
 LDFLAGS += -I../descriptors
 LDFLAGS += -I../include
 LDFLAGS += -I../lazylist
+LDFLAGS += -I../graph
 LDFLAGS += -I../lockfree_list
 LDFLAGS += -I../lockfree_skiplist
 LDFLAGS += -I../skiplist_lock
@@ -63,6 +64,7 @@ LDFLAGS += -I../rq/snapcollector
 # Bundle specific includes.
 LDFLAGS += -I../bundle
 LDFLAGS += -I../bundle_lazylist
+LDFLAGS += -I../bundled_graph
 LDFLAGS += -I../bundle_skiplist_lock
 LDFLAGS += -I../bundle_citrus
 # -------------------------
@@ -80,7 +82,7 @@ LDFLAGS += -lpapi
 
 machine=$(shell hostname)
 
-all: abtree bslack bst lazylist lflist citrus rlu skiplistlock lbundle ubundle
+all: abtree bslack bst lazylist graph lflist citrus rlu skiplistlock lbundle ubundle
 
 thispath=
 
@@ -116,6 +118,19 @@ lazylist.rq_rwlock:
 # 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DLAZYLIST -DRQ_HTM_RWLOCK $(pinning) $(thispath)main.cpp $(LDFLAGS)
 # lazylist.rq_unsafe:
 # 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DLAZYLIST -DRQ_UNSAFE $(pinning) $(thispath)main.cpp $(LDFLAGS)
+
+
+.PHONY: graph graph.rq_lockfree graph.rq_rwlock graph.rq_htm_rwlock graph.rq_unsafe
+graph: graph.rq_lockfree graph.rq_rwlock graph.rq_htm_rwlock graph.rq_unsafe
+graph.rq_lockfree:
+	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH -DRQ_LOCKFREE $(pinning) $(thispath)main.cpp $(LDFLAGS)
+lazylist.rq_rwlock:
+	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH -DRQ_RWLOCK $(pinning) $(thispath)main.cpp $(LDFLAGS)
+# lazylist.rq_htm_rwlock:
+# 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DLAZYLIST -DRQ_HTM_RWLOCK $(pinning) $(thispath)main.cpp $(LDFLAGS)
+# lazylist.rq_unsafe:
+# 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DLAZYLIST -DRQ_UNSAFE $(pinning) $(thispath)main.cpp $(LDFLAGS)
+
 
 
 # .PHONY: lflist lflist.rq_lockfree lflist.rq_rwlock lflist.rq_htm_rwlock lflist.rq_unsafe lflist.rq_snapcollector
@@ -173,7 +188,8 @@ lazylist.rq_rlu:
 citrus.rq_rlu:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DRLU_CITRUS $(pinning) $(thispath)main.cpp $(thispath)../rlu/rlu.cpp $(LDFLAGS)
 
-.PHONY: lbundle lazylist.rq_lbundle skiplistlock.rq_lbundle citrus.rq_lbundle 
+
+.PHONY: lbundle lazylist.rq_lbundle skiplistlock.rq_lbundle citrus.rq_lbundle graph.rq_lbundle
 lbundle: lazylist.rq_lbundle skiplistlock.rq_lbundle citrus.rq_lbundle 
 lazylist.rq_lbundle:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DRQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_LIST $(pinning) $(thispath)main.cpp $(LDFLAGS)
@@ -181,6 +197,9 @@ skiplistlock.rq_lbundle:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DRQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_SKIPLIST $(pinning) $(thispath)main.cpp $(LDFLAGS)
 citrus.rq_lbundle:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DRQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_CITRUS $(pinning) $(thispath)main.cpp $(LDFLAGS)
+graph.rq_lbundle:
+	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH_RQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_GRAPH $(pinning) $(thispath)main.cpp $(LDFLAGS)
+
 
 .PHONY: ubundle lazylist.rq_ubundle skiplistlock.rq_ubundle citrus.rq_ubundle 
 ubundle: lazylist.rq_ubundle skiplistlock.rq_ubundle citrus.rq_ubundle 

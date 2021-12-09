@@ -3,8 +3,8 @@
 // This file implements a bundle as a linked list of bundle entries. A bundle is
 // prepared by CASing the head of the bundle to a pending entry.
 
-#ifndef GRAPH_H
-#define GRAPH_H
+#ifndef BUNDLE_GRAPH_BUNDLE
+#define BUNDLE_GRAPH_BUNDLE
 
 
 #include <pthread.h>

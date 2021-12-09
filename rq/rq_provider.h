@@ -24,6 +24,9 @@
 #include "rq_snapcollector.h"
 #elif defined RQ_BUNDLE
 #include "rq_bundle.h"
+#elif defined GRAPH_RQ_BUNDLE
+#include "graph_rq_bundle.h"
+#else
 #else
 #error NO RQ PROVIDER DEFINED
 #endif

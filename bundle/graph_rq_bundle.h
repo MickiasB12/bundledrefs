@@ -5,8 +5,8 @@
 // Brown. Updates are responsible for calling the required APIs to prepare and
 // finalize the bundles.
 
-#ifndef BUNDLE_RQ_BUNDLE_H
-#define BUNDLE_RQ_BUNDLE_H
+#ifndef BUNDLE_RQ_GRAPH_BUNDLE_H
+#define BUNDLE_RQ_GRAPH_BUNDLE_H
 
 #ifdef BUNDLE_CLEANUP_BACKGROUND
 #ifndef BUNDLE_CLEANUP_SLEEP

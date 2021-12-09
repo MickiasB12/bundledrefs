@@ -18,6 +18,8 @@
 #include "circular_bundle.h"
 #elif defined BUNDLE_LINKED_BUNDLE
 #include "linked_bundle.h"
+#elif defined BUNDLE_GRAPH_BUNDLE
+#include "graph_linked_bundle.h"
 #elif defined BUNDLE_UNSAFE_BUNDLE
 #include "unsafe_linked_bundle.h"
 #else
