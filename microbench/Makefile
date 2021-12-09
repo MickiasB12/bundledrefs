@@ -197,8 +197,8 @@ skiplistlock.rq_lbundle:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DRQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_SKIPLIST $(pinning) $(thispath)main.cpp $(LDFLAGS)
 citrus.rq_lbundle:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DRQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_CITRUS $(pinning) $(thispath)main.cpp $(LDFLAGS)
-graph.rq_lbundle:
-	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH_RQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_GRAPH $(pinning) $(thispath)main.cpp $(LDFLAGS)
+# graph.rq_lbundle:
+# 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH_RQ_BUNDLE -DBUNDLE_LINKED_BUNDLE -DBUNDLE_GRAPH $(pinning) $(thispath)main.cpp $(LDFLAGS)
 
 
 .PHONY: ubundle lazylist.rq_ubundle skiplistlock.rq_ubundle citrus.rq_ubundle 
