@@ -122,9 +122,9 @@ lazylist.rq_rwlock:
 
 .PHONY: graph graph.rq_lockfree graph.rq_rwlock graph.rq_htm_rwlock graph.rq_unsafe
 graph: graph.rq_lockfree graph.rq_rwlock graph.rq_htm_rwlock graph.rq_unsafe
-graph.rq_lockfree:
-	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH -DRQ_LOCKFREE $(pinning) $(thispath)main.cpp $(LDFLAGS)
-lazylist.rq_rwlock:
+graph.rq_htm_rwlock:
+	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH -DRQ_HTM_RWLOCK $(pinning) $(thispath)main.cpp $(LDFLAGS)
+graph.rq_rwlock:
 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DGRAPH -DRQ_RWLOCK $(pinning) $(thispath)main.cpp $(LDFLAGS)
 # lazylist.rq_htm_rwlock:
 # 	$(GPP) $(FLAGS) -o $(thispath)$(machine).$@$(filesuffix).out $(xargs) -DLAZYLIST -DRQ_HTM_RWLOCK $(pinning) $(thispath)main.cpp $(LDFLAGS)
