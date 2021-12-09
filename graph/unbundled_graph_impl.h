@@ -18,7 +18,7 @@ class node_t{
     public:
         K key;
         volatile V val;
-        std::vector<node_t*> neighbors;
+        std::vector<node_t<K,V> *> neighbors;
         volatile int lock;
         volatile long long marked;
         volatile long long itime;
@@ -119,7 +119,7 @@ nnode->visited = false;
 vectorLock.lock();
 totalNodes.emplace_back(nnode);
 vectorLock.unlock();
-return nnode
+return nnode;
 }
 
 template<typename K, typename V, class RecManager>

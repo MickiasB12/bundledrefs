@@ -18,7 +18,7 @@ class node_t{
     public:
         K key;
         volatile V val;
-        std::vector<node_t*> neighbors;
+        std::vector<node_t<K, V>*> neighbors;
         volatile int lock;
         volatile long long marked;
         Bundle<node_t<K,V>> *rqbundle;
