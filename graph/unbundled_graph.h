@@ -1,5 +1,5 @@
-#ifndef GRAPH_H
-#define GRAPH_H
+#ifndef UNBUNDLED_GRAPH_H
+#define UNBUNDLED_GRAPH_H
 
 #ifndef MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY
 // define BEFORE including rq_provider.h
@@ -11,9 +11,9 @@
 #include <list>
 #include <mutex>
 #include <vector>
-#include "unbundled_graph_impl.h"
-#include "rq_provider.h"
 
+#include "rq_provider.h"
+#include "unbundled_graph_impl.h"
 
 template <typename K, typename V>
 class node_t;

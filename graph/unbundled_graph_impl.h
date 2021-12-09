@@ -1,11 +1,15 @@
 
 
+#ifndef UNBUNDLED_GRAPH_IMPL_H
+#define	UNBUNDLED_GRAPH_IMPL_H
+
 #include <cassert>
 #include <csignal>
 #include <algorithm>
 #include <vector>
-#include "unbundled_graph.h"
+
 #include "locks_impl.h"
+#include "unbundled_graph.h"
 
 #ifndef casword_t
 #define casword_t uintptr_t
@@ -13,7 +17,7 @@
 
 template <typename K, typename V>
 
-class node_t{
+class node_t {
     public:
         K key;
         volatile V val;
