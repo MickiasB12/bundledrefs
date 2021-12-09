@@ -1,5 +1,5 @@
-#ifndef LAZYLIST_IMPL_H
-#define LAZYLIST_IMPL_H
+#ifndef GRAPH_IMPL_H
+#define GRAPH_IMPL_H
 
 #include <cassert>
 #include <csignal>
@@ -24,8 +24,6 @@ class node_t{
         volatile long long itime;
         volatile long long dtime;
         volatile bool visited;
-
-        ~node_t() {delete rqbundle;}
 
         template <typename RQProvider>
         bool isMarked(const int tid, RQProvider* const prov) {
@@ -151,7 +149,7 @@ bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
     }
     endOfTheLoop:
         if(res!= NO_VALUE){
-            check = true
+            check = true;
         }
     for(auto& u : totalNodes){
         if(u){
@@ -217,6 +215,8 @@ V unbundled_graph<K, V, RecManager>::doInsert(const int tid, const K& key,
         return result;
     }
 }
+
+template<typename K, typename V, class RecManager>
 void unbundled_graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key){
     for(auto& x : node->neighbors){
         if(x->key == key){
@@ -227,6 +227,7 @@ void unbundled_graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& ke
         }
     }
 }
+template<typename K, typename V, class RecManager>
 V unbundled_graph<K, V, RecManager>::erase(const int tid, const K& key){
     nodeptr pred;
     nodeptr curr;
@@ -268,7 +269,6 @@ int unbundled_graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
                                         K* const resultKeys,
                                         V* const resultValues){
 
-    timestamp_t ts;
     int cnt = 0;
     std::list<nodeptr> queue;
     nodeptr curr;
@@ -302,6 +302,7 @@ int unbundled_graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
 template <typename K, typename V, class RecManager>
 long long unbundled_graph<K, V, RecManager>::debugKeySum(nodeptr head){
     long long result = 0;
+    nodeptr curr;
     std::list<nodeptr> queue;
     queue.push_back(head);
     while(!queue.empty()){

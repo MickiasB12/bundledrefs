@@ -1,5 +1,5 @@
-#ifndef LAZYLIST_H
-#define LAZYLIST_H
+#ifndef GRAPH_H
+#define GRAPH_H
 
 #include <stack>
 #include <unordered_set>
@@ -83,9 +83,6 @@ class unbundled_graph{
             queue.push_back(head);
             std::vector<nodeptr> revert_visited;
             long long size = 0;
-            if(head != null){
-                ++size;
-            }
             head->visited = true;
             nodeptr curr;
             while(!queue.empty()){
