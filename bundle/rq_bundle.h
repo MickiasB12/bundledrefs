@@ -268,6 +268,21 @@ class RQProvider {
     SOFTWARE_BARRIER;
     return lin_time;
   }
+   inline T linearize_update_at_write_for_unbundled_graphs(
+            const int tid,
+            T volatile * const lin_addr,
+            const T& lin_newval,
+            T volatile * const lin_addr2,
+            const T& lin_newval2,
+            NodeType * const * const insertedNodes,
+            NodeType * const * const deletedNodes){
+            SOFTWARE_BARRIER;
+          timestamp_t lin_time = get_update_lin_time(tid);
+          lin_addr->neighbors.emplace_back(lin_newval);  // Original linearization point.
+          lin_addr2->neighbors.emplace_back(lin_newval2);
+          SOFTWARE_BARRIER;
+          return lin_newval;
+    }
 };
 
 #endif

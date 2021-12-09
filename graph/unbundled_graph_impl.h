@@ -119,6 +119,7 @@ nnode->visited = false;
 vectorLock.lock();
 totalNodes.emplace_back(nnode);
 vectorLock.unlock();
+return nnode
 }
 
 template<typename K, typename V, class RecManager>
@@ -241,8 +242,8 @@ V unbundled_graph<K, V, RecManager>::erase(const int tid, const K& key){
                 acquireLock(&(u->lock));
                  nodeptr insertedNodes[] = {NULL};
                 nodeptr deletedNodes[] = {u, NULL};
-                result = u->value;
-                rqProvider->linearize_update_at_write_for_unbundled_graphs(tid, &u->marked, 1LL, insertedNodes, deletedNodes);
+                result = u->val;
+                rqProvider->linearize_update_at_write(tid, &u->marked, 1LL, insertedNodes, deletedNodes);
                 u->neighbors.clear();
                  rqProvider->announce_physical_deletion(tid, deletedNodes);
                 rqProvider->physical_deletion_succeeded(tid, deletedNodes);
@@ -278,11 +279,11 @@ int unbundled_graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
     while(!queue.empty()){
         curr = queue.front();
         queue.pop_front();
-        if(curr->key <= hi && curr->low && !curr->marked){
+        if(curr->key <= hi && curr->key >= lo && !curr->marked){
             rqProvider->traversal_try_add(tid, curr, resultKeys, resultValues, &cnt, lo, hi);
         }
         for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                if(!x->visited){
+                if(!(x->visited)){
                         x->visited = true;
                         queue.push_back(x);
                 }

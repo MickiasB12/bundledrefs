@@ -129,6 +129,7 @@ nnode->rqbundle->init();
 vectorLock.lock();
 totalNodes.emplace_back(nnode);
 vectorLock.unlock();
+return nnode;
 }
 
 template<typename K, typename V, class RecManager>
