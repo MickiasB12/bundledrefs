@@ -37,7 +37,7 @@ class Graph{
         long long debugKeySum(nodeptr head);
 
         V doInsert(const int tid, const K& key, const V& value, bool onlyIfAbsent);
-
+        void eraseNeighbors(nodeptr node, const K& key);
         int init[MAX_TID_POW2] = {
             0,
         };
@@ -78,6 +78,7 @@ class Graph{
         debugCounters* debugGetCounters() { return counters; }
         void clearCounters() { counters->clear(); }
 #endif
+        long long debugKeySum();
         long long getSizeInNodes() {
             std::list<nodeptr> queue;
             queue.push_back(head);
