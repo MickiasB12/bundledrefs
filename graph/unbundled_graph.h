@@ -1,16 +1,16 @@
 #ifndef GRAPH_H
 #define GRAPH_H
 
+#ifndef MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY
+// define BEFORE including rq_provider.h
+    #define MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY 4
+#endif
 #include <stack>
 #include <unordered_set>
 #include <algorithm>
 #include <list>
 #include <mutex>
 #include <vector>
-#ifndef MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY
-// define BEFORE including rq_provider.h
-#define MAX_NODES_INSERTED_OR_DELETED_ATOMICALLY 4
-#endif
 #include "unbundled_graph_impl.h"
 #include "rq_provider.h"
 
@@ -127,4 +127,4 @@ class unbundled_graph{
         
 };
 
-#endif /* LAZYLIST_H */
+#endif /* GRAPH_H */
