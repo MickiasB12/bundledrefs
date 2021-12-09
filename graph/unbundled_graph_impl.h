@@ -1,5 +1,4 @@
-#ifndef GRAPH_IMPL_H
-#define GRAPH_IMPL_H
+
 
 #include <cassert>
 #include <csignal>
@@ -65,9 +64,9 @@ unbundled_graph<K, V, RecManager>::~unbundled_graph(){
         curr = queue.front();
         queue.pop_front();
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!x->visited){
-                        x->visited = true;
-                        queue.push_back(x);
+                    if(!(*x)->visited){
+                        (*x)->visited = true;
+                        queue.push_back(*x);
                     }
                 }
         recordmgr->deallocate(dummyTid, curr);
@@ -150,7 +149,7 @@ bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
     }
     endOfTheLoop:
         if(res!= NO_VALUE){
-            check = true
+            check = true;
         }
     for(auto& u : totalNodes){
         if(u){
