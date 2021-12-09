@@ -120,7 +120,7 @@ class unbundled_graph{
                 curr = queue.front();
                 queue.pop_front();
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!(*x->visited)){
+                    if(!(*x)->visited){
                         x->visited = true;
                         queue.push_back(x); 
                     }
