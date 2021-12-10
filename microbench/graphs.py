@@ -66,7 +66,7 @@ metric3 = "(rq_throughput/1000000.0)"
 metric3_name = "rqs"
   
 
-datastructures= ["abtree" ,"bst" ,"lflist","lazylist","citrus","skiplistlock"]
+datastructures= ["abtree" ,"bst" ,"lflist","lazylist","citrus","skiplistlock", "graph"]
 logdatastructures = ["bst","citrus","skiplistlock"]
 rludatastructures = ["citrus","lazylist"]
 
@@ -90,7 +90,9 @@ if htm_enabled:
                  "lflist" :         ["rwlock", "htm_rwlock", "lockfree", "snapcollector"],
                  "lazylist" :       ["rwlock", "htm_rwlock", "lockfree", "rlu"],
                  "citrus" :         ["rwlock", "htm_rwlock", "lockfree", "rlu"],
-                 "skiplistlock" :   ["rwlock", "htm_rwlock", "lockfree", "snapcollector"]
+                 "skiplistlock" :   ["rwlock", "htm_rwlock", "lockfree", "snapcollector"],
+                 "graph":           ["rwlock", "htm_rw_lock","lockfree", "rlu"]
+
                 }
     allalgs =[ "rwlock", "htm_rwlock", "lockfree", "snapcollector", "rlu", "unsafe"]
     
@@ -100,7 +102,8 @@ else:
                  "lflist" :         ["rwlock", "lockfree", "snapcollector"],
                  "lazylist" :       ["rwlock", "lockfree", "rlu"],
                  "citrus" :         ["rwlock", "lockfree", "rlu"],
-                 "skiplistlock" :   ["rwlock", "lockfree", "snapcollector"]
+                 "skiplistlock" :   ["rwlock", "lockfree", "snapcollector"],
+                 "graph":           ["rwlock","lockfree", "rlu"]
                 }
     allalgs =[ "rwlock", "lockfree", "snapcollector", "rlu", "unsafe"]
             
@@ -109,7 +112,8 @@ dsToName = { "abtree" :         "ABTree",
              "lflist" :         "Lock-free List",
              "lazylist" :       "LazyList",
              "citrus" :         "Citrus",
-             "skiplistlock" :   "SkipList"
+             "skiplistlock" :   "SkipList",
+             "graph" :          "Graph"
             }
             
 dsToHatch = { "abtree" :         [ "", '.', '/', 'O', '-', '*' ],
@@ -117,7 +121,8 @@ dsToHatch = { "abtree" :         [ "", '.', '/', 'O', '-', '*' ],
                 "lflist" :       [ "", '.', '/', '-', 'O', '-', '*' ],
                 "lazylist" :     [ "", '.', '/', 'x', 'O', '-', '*' ],
                 "citrus" :       [ "", '.', '/', 'x', 'O', '-', '*' ],
-                "skiplistlock" : [ "", '.', '/', '-', 'O', '-', '*' ]
+                "skiplistlock" : [ "", '.', '/', '-', 'O', '-', '*' ],
+                "graph" :        [ "", '.', '/', 'x', 'O', '-', '*' ]
             }
 
 dsToColor = {"abtree" :       ['C0','C1','C2','C5'],
@@ -125,7 +130,8 @@ dsToColor = {"abtree" :       ['C0','C1','C2','C5'],
              "lflist" :       ['C0','C1','C2','C3','C5'],
              "lazylist" :     ['C0','C1','C2','C4','C5'],
              "citrus" :       ['C0','C1','C2','C4','C5'],
-             "skiplistlock" : ['C0','C1','C2','C3','C5']
+             "skiplistlock" : ['C0','C1','C2','C3','C5'],
+             "graph" :        ['C0','C1','C2','C4','C5']
             }
            
 dsToMarker = {"abtree" :        ["o", "^", "s", "x"],
@@ -133,7 +139,8 @@ dsToMarker = {"abtree" :        ["o", "^", "s", "x"],
              "lflist" :         ["o", "^", "s", "P", "x"],
              "lazylist" :       ["o", "^", "s", "X", "x"],
              "citrus" :         ["o", "^", "s", "X", "x"],
-             "skiplistlock" :   ["o", "^", "s", "P", "x"]
+             "skiplistlock" :   ["o", "^", "s", "P", "x"],
+             "graph" :          ["o", "^", "s", "X", "x"]
             }
 
 markerToSize = {    "o":22, #lock
@@ -151,7 +158,8 @@ dsToStyle = {"abtree" :         ['-', '-', '-', ':'],
              "lflist" :         ['-', '-', '-', '--', ':'],
              "lazylist" :       ['-', '-', '-', '--', ':'],
              "citrus" :         ['-', '-', '-', '--', ':'],
-             "skiplistlock" :   ['-', '-', '-', '--', ':']
+             "skiplistlock" :   ['-', '-', '-', '--', ':'],
+             "graph" :          ['-', '-', '-', '--', ':']
             }
             
 line_width = 5
