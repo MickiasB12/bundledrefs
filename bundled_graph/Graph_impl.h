@@ -411,6 +411,6 @@ template <typename K, typename V, class RecManager>
 inline bool Graph<K, V, RecManager>::isLogicallyDeleted(const int tid, node_t<K, V>* node){
     return node->isMarked(tid, rqProvider);
 }
-
+#endif
 
 
