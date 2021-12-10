@@ -276,6 +276,7 @@ class RQProvider {
     SOFTWARE_BARRIER;
     return lin_time;
   }
+    template <typename T>
      inline T linearize_update_at_write_for_unbundled_graphs(
             const int tid,
             T volatile * const lin_addr,
