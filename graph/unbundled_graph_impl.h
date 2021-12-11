@@ -146,7 +146,7 @@ bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
                         (x)->visited = true;
                         queue.push_back(x);
                     }
-                    if(((x)->key == key) && !(px)->marked){
+                    if(((x)->key == key) && !(x)->marked){
                         res = (x)->val;
                         goto endOfTheLoop;
                     }
