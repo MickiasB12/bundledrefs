@@ -68,6 +68,9 @@ unbundled_graph<K, V, RecManager>::~unbundled_graph(){
         curr = queue.front();
         queue.pop_front();
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
+                    if(!(*x)){
+                        break;
+                    }
                     if(!(*x)->visited){
                         (*x)->visited = true;
                         queue.push_back(*x);
@@ -229,6 +232,9 @@ V unbundled_graph<K, V, RecManager>::doInsert(const int tid, const K& key,
 template<typename K, typename V, class RecManager>
 void unbundled_graph<K, V, RecManager>::eraseNeighbors(nodeptr node, const K& key){
     for(auto& x : node->neighbors){
+        if(!x){
+            break;
+        }
         if(x->key == key){
             acquireLock(&(node->lock));
             node->neighbors.erase(std::remove(node->neighbors.begin(), node->neighbors.end(),x), node->neighbors.end());
@@ -292,6 +298,9 @@ int unbundled_graph<K, V, RecManager>::rangeQuery(const int tid, const K& lo,
             rqProvider->traversal_try_add(tid, curr, resultKeys, resultValues, &cnt, lo, hi);
         }
         for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
+                if(!(*x)){
+                    break;
+                }
                 if(!(*x)->visited){
                         (*x)->visited = true;
                         queue.push_back(*x);
@@ -322,6 +331,9 @@ long long unbundled_graph<K, V, RecManager>::debugKeySum(nodeptr head){
             result += curr->key;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
+                    if(!(*x)){
+                        break;
+                    }
                     if(!(*x)->visited){
                         (*x)->visited = true;
                         queue.push_back(*x);
