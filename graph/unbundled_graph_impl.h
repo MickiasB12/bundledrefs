@@ -328,7 +328,7 @@ long long unbundled_graph<K, V, RecManager>::debugKeySum(nodeptr head){
     while(!queue.empty()){
         curr = queue.front();
         queue.pop_front();
-        if(curr->key < KEY_MAX){
+        if(curr->key < KEY_MAX && curr->key > KEY_MIN){
             result += curr->key;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
