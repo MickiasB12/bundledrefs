@@ -141,7 +141,7 @@ bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
             goto endOfTheLoop;
         }
                 for(auto x = curr->neighbors.begin(); x != curr->neighbors.end(); x++){
-                    if(!(*x)->visited){
+                    if(!x->visited){
                         (*x)->visited = true;
                         queue.push_back(*x);
                     }
