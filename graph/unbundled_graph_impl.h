@@ -136,20 +136,23 @@ bool unbundled_graph<K, V, RecManager>::contains(const int tid, const K& key){
     while(!queue.empty()){
         curr = queue.front();
         queue.pop_front();
-        if((curr->key == key) && !curr->marked){
+        if(curr && (curr->key == key) && !curr->marked){
             res = curr->val;
             goto endOfTheLoop;
         }
-                for(auto& x : curr->neighbors){
+        if(curr){
+                 for(auto& x : curr->neighbors){
                     if(!x->visited){
                         (x)->visited = true;
                         queue.push_back(x);
                     }
-                    if(((x)->key == key) && !(x)->marked){
+                    if(((x)->key == key) && !(px)->marked){
                         res = (x)->val;
                         goto endOfTheLoop;
                     }
                 }
+        }
+           
     }
     endOfTheLoop:
         if(res!= NO_VALUE){
