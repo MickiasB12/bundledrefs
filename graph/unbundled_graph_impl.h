@@ -53,7 +53,7 @@ unbundled_graph<K, V, RecManager>::unbundled_graph(const int numProcesses, const
   initThread(tid);
 
   nodeptr max = new_node(tid, KEY_MAX, 0, NULL);
-  head = new_node(tid, KEY_MIN, 0, NULL);
+  head = new_node(tid, KEY_MIN, 0, max);
 
 }
 
