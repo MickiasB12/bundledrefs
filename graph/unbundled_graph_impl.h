@@ -186,23 +186,24 @@ V unbundled_graph<K, V, RecManager>::doInsert(const int tid, const K& key,
     while(true){
         recordmgr->leaveQuiescentState(tid);
         curr = totalNodes[rand() % totalNodes.size()];
-        pred = totalNodes[rand() % totalNodes.size()];
+        // pred = totalNodes[rand() % totalNodes.size()];
         if(curr == pred){
             curr = pred->neighbors[0];
+            
         }
         acquireLock(&(pred->lock));
-        acquireLock(&(curr->lock));
+        // acquireLock(&(curr->lock));
         if(curr->key == key){
             if(curr->marked){
                 releaseLock(&(curr->lock));
-                releaseLock(&(pred->lock));
+                // releaseLock(&(pred->lock));
                 recordmgr->enterQuiescentState(tid);
                 continue;
             } 
             if (onlyIfAbsent) {
                 V result = curr->val;
                 releaseLock(&(curr->lock));
-                releaseLock(&(pred->lock));
+                // releaseLock(&(pred->lock));
                 
                 recordmgr->enterQuiescentState(tid);
                 return result;
