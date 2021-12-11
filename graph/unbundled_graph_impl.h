@@ -221,7 +221,7 @@ V unbundled_graph<K, V, RecManager>::doInsert(const int tid, const K& key,
         nodeptr deletedNodes[] = {NULL};
 
         // Perform original linearization.
-        rqProvider->linearize_update_at_write_for_unbundled_graphs(tid, &curr, newnode, nullptr, nullptr, insertedNodes, deletedNodes);
+        rqProvider->linearize_update_at_write_for_unbundled_graphs(tid, &curr, newnode, insertedNodes, deletedNodes);
     
         releaseLock(&(curr->lock));
         releaseLock(&(pred->lock));

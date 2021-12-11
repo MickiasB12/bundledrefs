@@ -225,8 +225,6 @@ public:
             const int tid,
             T volatile * const lin_addr,
             const T& lin_newval,
-            T volatile * const lin_addr2,
-            const T& lin_newval2,
             NodeType * const * const insertedNodes,
             NodeType * const * const deletedNodes){
             if (!logicalDeletion) {
